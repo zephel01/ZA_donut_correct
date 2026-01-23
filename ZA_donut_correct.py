@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.8.11 (Custom Updated)
+ZA ドーナツ厳選 v1.8.12 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -16,6 +16,7 @@ ZA ドーナツ厳選 v1.8.11 (Custom Updated)
 ・ほかくパワー検知の実装、shiny3レシピ追加
 ・移動処理の変更(New)
 ・shiny4レシピを追加 (Update)
+・recipe3レシピを追加 (Update)
 """
 
 import os

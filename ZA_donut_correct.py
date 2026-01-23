@@ -40,6 +40,7 @@ VERSION = '1.8.11'
 #   'shiny4'   : 色違い厳選レシピ4 (ほかくパワー付与レシピ2 New)
 #   'recipe1'  : どうぐパワー節約レシピ
 #   'recipe2'  : どうぐパワー重視レシピ/カシブx8
+#   'recipe3'  : 節約レシピ recipe3
 #   'rainbow1' : バコウ1,ウタン1,ナモ4,ロゼル2
 #   'rainbow2' : バコウ1,ヨロギ1,ハバン1,ロゼル5
 #   'rainbow3' : ウタン1,ヨロギ1,ナモ4,ロゼル2
@@ -186,7 +187,7 @@ except:
 ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', str(SETTING_CAPTURE_COMPROMISE)).lower() == 'true' else False
 
 # 有効性チェック
-valid_recipes = ['recipe1', 'recipe2', 'shiny1', 'shiny2', 'shiny3', 'shiny4', 'rainbow1', 'rainbow2', 'rainbow3']
+valid_recipes = ['recipe1', 'recipe2', 'recipe3', 'shiny1', 'shiny2', 'shiny3', 'shiny4', 'rainbow1', 'rainbow2', 'rainbow3']
 if ENV_RECIPE not in valid_recipes:
     if 'shiny' in ENV_RECIPE:
         if '4' in ENV_RECIPE: ENV_RECIPE = 'shiny4'
@@ -556,6 +557,15 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.log(f"レシピ入力: {ENV_RECIPE}")
             self.pressRep(Hat.TOP, repeat=6, duration=0.05, interval=0.1)
             self.pressRep(Button.A, repeat=8, duration=0.1, interval=0.1)
+
+        elif ENV_RECIPE == 'recipe3':
+            self.log(f"レシピ入力: {ENV_RECIPE}")
+            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
+            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
+            self.pressRep(Hat.TOP, repeat=2, duration=0.05, interval=0.1)
+            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
+            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
+            self.pressRep(Button.A, repeat=3, duration=0.1, interval=0.1)
 
         elif ENV_RECIPE == 'rainbow1':
             self.log(f"レシピ入力: {ENV_RECIPE}")

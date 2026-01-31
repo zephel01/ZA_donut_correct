@@ -257,20 +257,35 @@ class ZA_DonutV188(ImageProcPythonCommand):
         now = datetime.now().strftime("%H:%M:%S")
         print(f"[{now}] [{self.count:05d}] {msg}")
 
+    def _fmt_btn(self, btn):
+        if isinstance(btn, (list, tuple)):
+            return "[" + ", ".join([self._fmt_btn(b) for b in btn]) + "]"
+        if hasattr(btn, 'name'):
+            return f"{btn.__class__.__name__}.{btn.name}"
+        return str(btn)
+
     def debug_log(self, msg):
         if self.DEBUG_LOG:
             self.log(f"[CMD] {msg}")
 
     def press(self, buttons, duration=0.1, wait=0.1):
-        self.debug_log(f"Press: {buttons} (dur={duration}, wait={wait})")
+        self.debug_log(f"Press: {self._fmt_btn(buttons)} (dur={duration}, wait={wait})")
+        # super().press内部でのwait()ログ出力を抑止したい場合はフラグ制御
+        _prev = self.DEBUG_LOG
+        self.DEBUG_LOG = False # press内部の自動waitログを抑制
         super().press(buttons, duration, wait)
+        self.DEBUG_LOG = _prev
 
     def pressRep(self, buttons, repeat=1, duration=0.1, interval=0.1, wait=0.1):
-        self.debug_log(f"PressRep: {buttons} x{repeat} (dur={duration}, interval={interval}, wait={wait})")
+        self.debug_log(f"PressRep: {self._fmt_btn(buttons)} x{repeat} (dur={duration}, interval={interval}, wait={wait})")
+        _prev = self.DEBUG_LOG
+        self.DEBUG_LOG = False
         super().pressRep(buttons, repeat, duration, interval, wait)
+        self.DEBUG_LOG = _prev
 
     def wait(self, duration):
-        self.debug_log(f"Wait: {duration}s")
+        if self.DEBUG_LOG:
+            self.log(f"[CMD] Wait: {duration}s")
         super().wait(duration)
 
     def _load_templates(self):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.8.12 (Custom Updated)
+ZA ドーナツ厳選 v1.8.13 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -17,6 +17,7 @@ ZA ドーナツ厳選 v1.8.12 (Custom Updated)
 ・移動処理の変更(New)
 ・shiny4レシピを追加 (Update)
 ・recipe3レシピを追加 (Update)
+・デバック機能の修正
 """
 
 import os
@@ -261,12 +262,15 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.log(f"[CMD] {msg}")
 
     def press(self, buttons, duration=0.1, wait=0.1):
+        self.debug_log(f"Press: {buttons} (dur={duration}, wait={wait})")
         super().press(buttons, duration, wait)
 
     def pressRep(self, buttons, repeat=1, duration=0.1, interval=0.1, wait=0.1):
+        self.debug_log(f"PressRep: {buttons} x{repeat} (dur={duration}, interval={interval}, wait={wait})")
         super().pressRep(buttons, repeat, duration, interval, wait)
 
     def wait(self, duration):
+        self.debug_log(f"Wait: {duration}s")
         super().wait(duration)
 
     def _load_templates(self):
@@ -447,7 +451,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         if TIMING_MODE == 'switch1':
             self.debug_log("Step1: Open Picnic Menu (Switch1)")
             self.press(Button.PLUS, 0.2, 0.5)
-            super().wait(1.0)
+            self.wait(1.0)
             self.press(Button.Y, 0.2, 0.4)
             self.pressRep(Hat.BTM, repeat=3, duration=0.1, interval=0.1)
             self.press(Button.A, 0.2, 0.4)
@@ -456,42 +460,42 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.press(Button.A, 0.2, 0.6)
             
             self.debug_log("Step2: Loading Ingredients...")
-            super().wait(8.0)
-            
+            self.wait(8.0)
+    
             self.debug_log("Step3: Selecting Ingredients")
             self.press(Direction.UP, 2.0)
-            super().wait(1.5)
+            self.wait(1.5)
             self.press(Button.A, 0.2, 0.4)
-            super().wait(7.0)
+            self.wait(7.0)
             self.press(Direction.UP, 2.5)
             self.press(Direction.LEFT, 0.5)
-            super().wait(1.6)
+            self.wait(1.6)
             self.press(Button.A, 0.2, 0.5)
             self.press(Button.A, 0.2, 0.5)
             self.press(Button.A, 0.2, 0.5)
-            super().wait(3.0)
+            self.wait(3.0)
 
         else:
             self.debug_log("Step1: Open Picnic Menu (Switch2)")
             self.press(Button.PLUS, 0.2, 0.5)
-            super().wait(1.0)
+            self.wait(1.0)
             self.press(Button.Y, 0.2, 0.4)
             self.pressRep(Hat.BTM, repeat=3, duration=0.1, interval=0.1)
             self.press(Button.A, 0.2, 0.4)
             self.press(Button.A, 0.2, 0.6)
             
             self.debug_log("Step2: Loading Ingredients...")
-            super().wait(2.6)
+            self.wait(2.6)
             
             self.debug_log("Step3: Selecting Ingredients")
             self.press(Button.Y, 0.2, 0.5)
             self.wait(0.5)
             self.press(Button.A, 0.2, 0.5)
-            super().wait(3.6)
+            self.wait(3.6)
             self.pressRep(Button.Y, repeat=2, duration=0.1, interval=0.7)
             self.wait(0.2)
             self.press(Direction.LEFT, 0.5)
-            super().wait(0.6)
+            self.wait(0.6)
             self.press(Button.A, 0.2, 0.5)
             self.press(Button.A, 0.2, 0.5)
             self.press(Button.A, 0.2, 0.5)
@@ -507,7 +511,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.5)
 
         self.debug_log("Step7: Wait 3.0s (Result)")
-        super().wait(3.0)
+        self.wait(3.0)
         self.debug_log("Step8: Button.A")
         self.press(Button.A, 0.2, 0.5)
 
@@ -606,17 +610,17 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.press(Button.A, 0.2, 0.5)
         
         if TIMING_MODE == 'switch1':
-            super().wait(1.0)
+            self.wait(1.0)
             self.press(Hat.BTM, 0.1, 0.1)
             self.press(Button.A, 0.2, 0.5)
             self.debug_log("Wait 6.0s (Refresh)")
-            super().wait(6.0)
+            self.wait(6.0)
         else:
-            super().wait(0.5)
+            self.wait(0.5)
             self.press(Hat.BTM, 0.1, 0.1)
             self.press(Button.A, 0.2, 0.5)
             self.debug_log("Wait 4.0s (Refresh)")
-            super().wait(4.0)
+            self.wait(4.0)
 
     def backupRestart(self):
         self.log(f"リセットシーケンス ({TIMING_MODE})")
@@ -627,17 +631,17 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.pressRep(Button.A, repeat=6, interval=0.5)
         
         if TIMING_MODE == 'switch1':
-            super().wait(17.0)
+            self.wait(17.0)
         else:
-            super().wait(10.0)
+            self.wait(10.0)
 
         self.press([Hat.TOP, Button.X, Button.B], 0.2, 1.0)
         self.pressRep(Button.A, repeat=12, interval=0.4)
         
         if TIMING_MODE == 'switch1':
-            super().wait(15.0)
+            self.wait(15.0)
         else:
-            super().wait(10.0)
+            self.wait(10.0)
 
     def checkDonutResult(self):
         self.save_capture("BEFORE")

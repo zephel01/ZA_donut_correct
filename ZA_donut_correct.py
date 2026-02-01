@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.8.13 (Custom Updated)
+ZA ドーナツ厳選 v1.8.14 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -18,6 +18,7 @@ ZA ドーナツ厳選 v1.8.13 (Custom Updated)
 ・shiny4レシピを追加 (Update)
 ・recipe3レシピを追加 (Update)
 ・デバック機能の修正
+・エリア判定の追加(New))
 """
 
 import os
@@ -33,7 +34,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.8.13'
+VERSION = '1.8.14'
 
 # 【1. レベル/レシピ指定】
 #   'shiny1'   : 色違い厳選レシピ1 (節約版)
@@ -472,18 +473,10 @@ class ZA_DonutV188(ImageProcPythonCommand):
         # --- エリア判定と動的移動ロジック ---
         if self.isContainTemplate('LegendsZA/area_all.png', 0.88) < 0.88:
             self.debug_log("エリア不一致：すべてへ移動を開始します")
-            self.press(Button.MINUS, 0.1)
-            self.wait(1.0)
-            self.press(Button.A, 0.1)
-            self.wait(1.5)
-            
-            # メディオプラザに到着するまで待機/リトライ
-            while self.isContainTemplate('LegendsZA/medioplaza.png', 0.88) < 0.88:
-                self.debug_log("メディオプラザ画面を待機中...")
-                self.press(Button.B, 0.1)
-                self.wait(0.5)
-                self.press(Button.Y, 0.1)
-                self.wait(1.5)
+            self.press(Button.MINUS, 0.2, 1.0)
+            self.press(Button.A, 0.2, 0.5)
+            self.press(Button.B, 0.2, 0.5)
+            self.press(Button.Y, 0.2, 0.5)
         # ------------------------------------
 
         # 各モード共通のメニュー操作

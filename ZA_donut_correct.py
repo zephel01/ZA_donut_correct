@@ -470,8 +470,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.press(Button.Y, 0.2, 0.4)
 
         # --- エリア判定と動的移動ロジック ---
-        if self.isContainTemplate('LegendsZA/area_zone.png', 0.88) < 0.88:
-            self.debug_log("エリア不一致：メディオプラザへ移動を開始します")
+        if self.isContainTemplate('LegendsZA/area_all.png', 0.88) < 0.88:
+            self.debug_log("エリア不一致：すべてへ移動を開始します")
             self.press(Button.MINUS, 0.1)
             self.wait(1.0)
             self.press(Button.A, 0.1)

@@ -61,7 +61,7 @@ SETTING_TYPE = 'Dradon'
 # 【3. 道具の種類 (クラス)】(recipe/rainbow系用)
 #   [一覧]: kinomi, ball, coin, treasure, special, candy
 # -----------------------------------------------------------------------------
-SETTING_ITEM_CLASS = 'ball'
+SETTING_ITEM_CLASS = 'kinomi'
 
 # 【4. サイズの種類】(shiny系用)
 #   [一覧]: oyabun, big, small

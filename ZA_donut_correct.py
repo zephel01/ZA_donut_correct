@@ -463,13 +463,34 @@ class ZA_DonutV188(ImageProcPythonCommand):
     def makeDonut(self):
         self.log(f"ドーナツ作成開始 ({TIMING_MODE})")
 
-        if TIMING_MODE == 'switch1':
-            self.debug_log("Step1: Open Picnic Menu (Switch1)")
-            self.press(Button.PLUS, 0.2, 0.5)
+        # Step1: Open Picnic Menu (Common Start)
+        self.debug_log(f"Step1: Open Picnic Menu ({TIMING_MODE})")
+        self.press(Button.PLUS, 0.2, 0.5)
+        self.wait(1.0)
+        self.press(Button.Y, 0.2, 0.4)
+
+        # --- エリア判定と動的移動ロジック ---
+        if self.isContainTemplate('LegendsZA/area_zone.png', 0.88) < 0.88:
+            self.debug_log("エリア不一致：メディオプラザへ移動を開始します")
+            self.press(Button.MINUS, 0.1)
             self.wait(1.0)
-            self.press(Button.Y, 0.2, 0.4)
-            self.pressRep(Hat.BTM, repeat=3, duration=0.1, interval=0.1)
-            self.press(Button.A, 0.2, 0.4)
+            self.press(Button.A, 0.1)
+            self.wait(1.5)
+            
+            # メディオプラザに到着するまで待機/リトライ
+            while self.isContainTemplate('LegendsZA/medioplaza.png', 0.88) < 0.88:
+                self.debug_log("メディオプラザ画面を待機中...")
+                self.press(Button.B, 0.1)
+                self.wait(0.5)
+                self.press(Button.Y, 0.1)
+                self.wait(1.5)
+        # ------------------------------------
+
+        # 各モード共通のメニュー操作
+        self.pressRep(Hat.BTM, repeat=3, duration=0.1, interval=0.1)
+        self.press(Button.A, 0.2, 0.4)
+
+        if TIMING_MODE == 'switch1':
             self.press(Button.A, 0.2, 0.6)
             self.press(Button.A, 0.2, 0.4)
             self.press(Button.A, 0.2, 0.6)
@@ -490,13 +511,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.press(Button.A, 0.2, 0.5)
             self.wait(3.0)
 
-        else:
-            self.debug_log("Step1: Open Picnic Menu (Switch2)")
-            self.press(Button.PLUS, 0.2, 0.5)
-            self.wait(1.0)
-            self.press(Button.Y, 0.2, 0.4)
-            self.pressRep(Hat.BTM, repeat=3, duration=0.1, interval=0.1)
-            self.press(Button.A, 0.2, 0.4)
+        else: # switch2
             self.press(Button.A, 0.2, 0.6)
             
             self.debug_log("Step2: Loading Ingredients...")
@@ -506,7 +521,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.press(Button.Y, 0.2, 0.5)
             self.wait(0.5)
             self.press(Button.A, 0.2, 0.5)
-            self.wait(3.6)
+            super().wait(3.6)
             self.pressRep(Button.Y, repeat=2, duration=0.1, interval=0.7)
             self.wait(0.2)
             self.press(Direction.LEFT, 0.5)
@@ -774,6 +789,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
                         any_type_success = True
                         res1_lvl = 'lv3'
                         res2_lvl = 'lv3'
+                        s1, s2 = oya_score, spa_score
                         l1_n = "オヤブン"
                         l2_n = "かがやき(Any)"
 
@@ -809,9 +825,9 @@ class ZA_DonutV188(ImageProcPythonCommand):
         capture_compromise_success = False
         if ENABLE_CAPTURE_COMPROMISE and 'shiny' in ENV_RECIPE and ENABLE_CAPTURE_POWER:
             # 条件：かがやきが「ぜんぶ」(All)かつ目標レベル以上
-            if matched_type_name == "All" and res2_lvl in [t.upper() for t in TARGETS_EXTRA]:  # 'lv2' -> 'LV2' など調整が必要なら
-                # ほかくパワーがターゲットタイプのいずれかに該当すればOK
-                if capture_matched_type in TARGET_TYPES:
+            if matched_type_name == "All" and res2_lvl in TARGETS_EXTRA:
+                # ほかくパワーがターゲットタイプのいずれかに該当、または「すべて」ならOK
+                if capture_matched_type in TARGET_TYPES or capture_matched_type == "All2":
                     self.log(f"★ ほかくパワー妥協成功: かがやき(ぜんぶ){res2_lvl} + ほかく({capture_matched_type}){res3_lvl}")
                     capture_compromise_success = True
 
@@ -820,16 +836,21 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
         self.log(f"判定: {l1_n}[{str1}]({s1:.2f}) / {l2_n}[{str2}]({s2:.2f})")
 
+        # 特別終了条件(1): 非shinyモードでのどうぐパワー単独終了
         if ('shiny' not in ENV_RECIPE) and ENABLE_TOOL_ONLY_STOP and (res2_lvl is not None):
             self.log(f"★ 特別終了条件: どうぐパワー単独条件クリア ({l2_n}: {res2_lvl})")
             return True
         
-        # 最終成功判定
-        base_success = (res1_lvl is not None and res2_lvl is not None) or any_type_success
-        capture_success = res3_lvl is not None if ENABLE_CAPTURE_POWER else True
-        compromise_success = capture_compromise_success
+        # 特別終了条件(2): Jackpot (AnyTypeOyabun)
+        if any_type_success:
+            return True
 
-        if (base_success and capture_success) or compromise_success:
+        # 最終成功判定
+        # 通常判定： (サイズ一致 AND かがやき一致) AND (ほかくパワー一致 OR ほかくパワー妥協成立)
+        base_match = (res1_lvl is not None and res2_lvl is not None)
+        capture_ok = (res3_lvl is not None) if ENABLE_CAPTURE_POWER else True
+
+        if base_match and (capture_ok or capture_compromise_success):
             return True
         return False
 

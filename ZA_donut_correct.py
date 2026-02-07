@@ -202,6 +202,11 @@ ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', 
 # =============================================================================
 # レシピ管理機能
 # =============================================================================
+# スクリプトファイルの場所を取得（絶対パス）
+SCRIPT_DIR_ABS = os.path.dirname(os.path.abspath(__file__))
+RECIPE_DIR_ABS = os.path.join(SCRIPT_DIR_ABS, 'recipes')
+
+
 def get_valid_recipes():
     """
     recipes/ ディレクトリ内のレシピファイルをスキャンして有効なレシピ名を返す
@@ -209,11 +214,10 @@ def get_valid_recipes():
     Returns:
         list: 有効なレシピ名のリスト（拡張子なし）
     """
-    recipe_dir = 'recipes'
     valid_recipes = []
 
-    if os.path.exists(recipe_dir):
-        for filename in os.listdir(recipe_dir):
+    if os.path.exists(RECIPE_DIR_ABS):
+        for filename in os.listdir(RECIPE_DIR_ABS):
             if filename.endswith('.py') and filename != 'template.py':
                 recipe_name = filename[:-3]  # .py を除去
                 valid_recipes.append(recipe_name)
@@ -235,8 +239,7 @@ def load_recipe(recipe_name):
         FileNotFoundError: レシピファイルが見つからない場合
         AttributeError: レシピモジュールに必須属性がない場合
     """
-    recipe_dir = 'recipes'
-    recipe_file = os.path.join(recipe_dir, f'{recipe_name}.py')
+    recipe_file = os.path.join(RECIPE_DIR_ABS, f'{recipe_name}.py')
 
     if not os.path.exists(recipe_file):
         raise FileNotFoundError(f"レシピファイルが見つかりません: {recipe_file}")

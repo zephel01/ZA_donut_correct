@@ -4,6 +4,23 @@
 
 `recipes/` ディレクトリ内に `.py` ファイルを追加するだけで、独自のレシピを作成・使用できます。
 
+## レシピ名の決まり方
+
+**重要**: レシピ名は **ファイル名** から決まります。
+
+| ファイル名 | レシピ名 | 説明 |
+|-----------|---------|------|
+| `shiny1.py` | `shiny1` | ファイル名から `.py` を除去したものがレシピ名になる |
+| `recipe1.py` | `recipe1` | |
+| `rainbow1.py` | `rainbow1` | |
+| `my_recipe.py` | `my_recipe` | |
+
+### 新しいレシピを追加する場合
+
+1. `recipes/my_new_recipe.py` を作成
+2. 設定ファイルで `SETTING_RECIPE = 'my_new_recipe'` を指定
+3. プログラム起動時に自動で検出・使用される
+
 ## 作成手順
 
 ### 1. テンプレートをコピー
@@ -76,6 +93,176 @@ RECIPE=my_custom_recipe python ZA_donut_correct.py
 - rainbow レシピは素材の組み合わせを示すテンプレートです
 - 現在登録されている rainbow1-3 は `TARGETS = ['tool']` に設定されています
 - 新規に追加する場合は、どちらのパワーが強いかによって `TARGETS` を `['shiny']` か `['tool']` のどちらかに指定してください
+
+## TARGETS による動作の振り分け
+
+### 振り分けの仕組み
+
+**重要**: プログラムの動作は `TARGETS` の値によって振り分けられます。レシピ名（ファイル名）は関係ありません。
+
+| TARGETS の値 | 動作モード | プログラムの動作 |
+|-------------|-----------|----------------|
+| `['shiny']` | 色違いモード | 色違いのタイプ、サイズ、かがやきパワーを判定して厳選 |
+| `['tool']` | どうぐパワーモード | どうぐパワー（道具の種類）のレベルを判定して厳選 |
+
+### プログラム内での判定例
+
+```python
+# 色違いモードの場合
+if 'shiny' in CURRENT_RECIPE['targets']:
+    print(f"Target: {ENV_RECIPE} + Type=[{TARGET_TYPE_Display}] & {SIZE}")
+    # 色違いのタイプやサイズを参照
+else:
+    # どうぐパワーモードの場合
+    print(f"Item Class: {INPUT_ITEM_CLASS}")
+    # 道具の種類を参照
+```
+
+### 具体例
+
+#### 例1: shiny1 レシピ（色違いモード）
+
+```python
+# recipes/shiny1.py
+TARGETS = ['shiny']
+```
+
+**動作**:
+- 色違いモードで動作
+- `SETTING_TYPE`（例: 'Ghost', 'Dark'）を参照
+- `SETTING_SIZE`（例: 'small'）を参照
+- 色違い判定を行う
+
+**設定例**:
+```python
+SETTING_RECIPE = 'shiny1'
+SETTING_TYPE = 'Ghost'
+SETTING_SIZE = 'small'
+```
+
+#### 例2: recipe1 レシピ（どうぐパワーモード）
+
+```python
+# recipes/recipe1.py
+TARGETS = ['tool']
+```
+
+**動作**:
+- どうぐパワーモードで動作
+- `SETTING_ITEM_CLASS`（例: 'kinomi', 'ball'）を参照
+- どうぐパワー判定を行う
+
+**設定例**:
+```python
+SETTING_RECIPE = 'recipe1'
+SETTING_ITEM_CLASS = 'kinomi'
+```
+
+#### 例3: rainbow1 レシピ（どうぐパワーモード、デフォルト）
+
+```python
+# recipes/rainbow1.py
+TARGETS = ['tool']  # デフォルト
+```
+
+**動作**: どうぐパワーモード
+
+**設定例**:
+```python
+SETTING_RECIPE = 'rainbow1'
+SETTING_ITEM_CLASS = 'kinomi'
+```
+
+#### 例4: rainbow1 レシピ（色違いモード、変更後）
+
+```python
+# recipes/rainbow1.py
+TARGETS = ['shiny']  # 書き換え
+```
+
+**動作**: 色違いモード
+
+**設定例**:
+```python
+SETTING_RECIPE = 'rainbow1'
+SETTING_TYPE = 'Ghost'
+SETTING_SIZE = 'small'
+```
+
+### rainbow レシピの使い分け
+
+rainbow レシピは素材の組み合わせを示すテンプレートです。素材の組み合わせはそのままで、`TARGETS` を書き換えることで色違いモード・どうぐパワーモードを切り替えられます。
+
+| レシピ | 素材の組み合わせ | TARGETS（変更可能） | 使用モード |
+|-------|------------------|-------------------|-----------|
+| `rainbow1.py` | バコウ1, ウタン1, ナモ4, ロゼル2 | `['tool']` → `['shiny']` | どちらでも可 |
+| `rainbow2.py` | バコウ1, ヨロギ1, ハバン1, ロゼル5 | `['tool']` → `['shiny']` | どちらでも可 |
+| `rainbow3.py` | ウタン1, ヨロギ1, ナモ4, ロゼル2 | `['tool']` → `['shiny']` | どちらでも可 |
+
+#### 色違いモードとして使いたい場合
+
+1. `recipes/rainbow1.py` を開く
+2. `TARGETS = ['tool']` を `TARGETS = ['shiny']` に書き換え
+3. 色違いモードとして使用
+
+#### どうぐパワーモードとして使いたい場合
+
+1. `recipes/rainbow1.py` を開く
+2. `TARGETS = ['shiny']` を `TARGETS = ['tool']` に書き換え（またはそのまま）
+3. どうぐパワーモードとして使用
+
+### 新しいレシピを作成する場合
+
+#### 色違いモードのレシピを作る場合
+
+```python
+# my_shiny_recipe.py
+from Commands.Keys import Button, Hat
+
+NAME = "カスタム色違いレシピ"
+CATEGORY = "custom"
+TARGETS = ['shiny']  # 色違いモード
+
+STEPS = [
+    {'action': 'pressRep', 'type': Hat.TOP, 'repeat': 1, 'duration': 0.05, 'interval': 0.1},
+    {'action': 'pressRep', 'type': Button.A, 'repeat': 1, 'duration': 0.1, 'interval': 0.1},
+]
+```
+
+#### どうぐパワーモードのレシピを作る場合
+
+```python
+# my_tool_recipe.py
+from Commands.Keys import Button, Hat
+
+NAME = "カスタムどうぐパワーレシピ"
+CATEGORY = "custom"
+TARGETS = ['tool']  # どうぐパワーモード
+
+STEPS = [
+    {'action': 'pressRep', 'type': Hat.TOP, 'repeat': 1, 'duration': 0.05, 'interval': 0.1},
+    {'action': 'pressRep', 'type': Button.A, 'repeat': 1, 'duration': 0.1, 'interval': 0.1},
+]
+```
+
+### プログラム起動時の確認
+
+プログラム起動時に以下のメッセージで `TARGETS` の値を確認できます：
+
+```
+[System] Available recipes: my_new_recipe, rainbow1, rainbow2, ...
+[System] Recipe loaded: バコウ1,ウタン1,ナモ4,ロゼル2 (targets: tool)
+                                                        ^^^^^^^^^^^^
+                                                        ここでTARGETSを確認
+```
+
+### まとめ
+
+| 項目 | 重要な点 |
+|------|---------|
+| レシピ名 | ファイル名から決まる |
+| 動作モード | `TARGETS` の値で決まる（`['shiny']` か `['tool']`） |
+| rainbowレシピ | 素材の組み合わせは固定、`TARGETS` でモードを切り替え可能 |
 
 ### STEPS の書き方
 

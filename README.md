@@ -1,8 +1,64 @@
-# ZA ドーナツ厳選マクロ v1.8.14
+# ZA ドーナツ厳選マクロ v1.9.0
 
 Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパワーやサイズを厳選するためのマクロです。
 
+## フォルダ構成
+
+```
+Poke-Controller-Modified-Extension/
+└── SerialController/
+    └── Commands/
+        └── PythonCommands/
+            └── ZA_donut_correct/
+                ├── LegendsZA/          # 画像ファイル（テンプレート）
+                │   ├── shiny_label.png
+                │   ├── type_all.png
+                │   └── ... (その他画像)
+                ├── recipes/             # レシピファイル
+                │   ├── shiny1.py
+                │   ├── shiny2.py
+                │   ├── shiny3.py
+                │   ├── shiny4.py
+                │   ├── recipe1.py
+                │   ├── recipe2.py
+                │   ├── recipe3.py
+                │   ├── rainbow1.py
+                │   ├── rainbow2.py
+                │   ├── rainbow3.py
+                │   └── template.py
+                ├── ZA_donut_correct.py  # 本体プログラム
+                ├── USER_RECIPE_GUIDE.md  # 独自レシピ作成ガイド
+                └── README.md            # このファイル
+```
+
+## インストール手順
+
+1. Poke-Controller-Modified-Extension をダウンロード・展開
+2. 以下のフォルダ構成になるようにファイルを配置
+
+```
+Poke-Controller-Modified-Extension\
+└── SerialController\
+    └── Commands\
+        └── PythonCommands\
+            └── ZA_donut_correct\
+                ├── LegendsZA\
+                ├── recipes\
+                ├── ZA_donut_correct.py
+                ├── USER_RECIPE_GUIDE.md
+                └── README.md
+```
+
+3. Poke Controller を起動
+4. ZA ドーナツ厳選マクロを実行
+
 ## 主な機能
+
+### 0. レシピ外部ファイル化機能 (v1.9.0)
+レシピを外部ファイル（`recipes/` ディレクトリ内の `.py` ファイル）から読み込むことができます。
+- **ユーザー独自レシピ**: `recipes/template.py` をコピーして独自のレシピを作成可能
+- **動的レシピ検出**: `recipes/` ディレクトリ内の `.py` ファイルを自動検出
+- **詳細は `USER_RECIPE_GUIDE.md` を参照**
 
 ### 1. タイミング切り替え機能 (Switch1/Switch2)
 ハードウェアの読み込み速度に合わせて動作タイミングを最適化できます。
@@ -13,6 +69,8 @@ Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパ
 - **色違い厳選 (shiny1~4)**: 指定したタイプの「かがやきパワー」と「サイズ（オヤブン/でかでか/ちびちび）」を同時に狙います。
 - **どうぐパワー厳選 (recipe1~3)**: 指定した道具クラス（きのみ、ボール等）のパワーを効率よく集めます。
 - **レインボードーナツ (rainbow1~3)**: 特殊な組み合わせのレシピに対応。
+  - `TARGETS = ['tool']` を指定し、どうぐパワー優先で動作します。
+  - ユーザーが `TARGETS = ['shiny']` に変更することで色違い優先としても使用可能。
 
 ### 3. 高度な判定・妥協機能
 - **サイズ相互互換 (CrossSize)**: 目標のタイプが出た際、指定した別のサイズでも採用する機能。
@@ -31,6 +89,8 @@ Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパ
 
 ## 設定方法
 
+### 基本設定
+
 `ZA_donut_correct.py` 内の「ユーザー設定エリア」を書き換えて使用してください。
 
 - `SETTING_RECIPE`: 実行するレシピを選択
@@ -41,7 +101,8 @@ Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパ
     - `recipe1`: どうぐパワー節約レシピ
     - `recipe2`: どうぐパワー重視（カシブx8）
     - `recipe3`: 節約レシピ3
-    - `rainbow1~3`: 特殊なレインボードーナツレシピ
+    - `rainbow1~3`: 特殊なレインボードーナツレシピ（`recipes/` ディレクトリから自動検出）
+    - `my_recipe`: ユーザーが `recipes/` ディレクトリに追加した独自レシピ
 - `SETTING_TYPE`: 狙うポケモンのタイプ（複数指定可能、例: 'Ghost, Dark'）
     - Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy, All
 - `SETTING_ITEM_CLASS`: 狙う道具の種類（recipe/rainbow系用）
@@ -51,3 +112,28 @@ Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパ
 - `SETTING_TIMING_MODE`: 本体のモデルに合わせて `switch1` または `switch2` を指定
     - switch2: 高速読み込み（有機EL等）
     - switch1: 低速読み込み（旧型・Lite等）
+
+### 独自レシピの作成方法
+
+`recipes/` ディレクトリ内に `.py` ファイルを追加するだけで、独自のレシピを作成・使用できます。
+
+1. `recipes/template.py` をコピーして名前を変更（例: `my_recipe.py`）
+2. `NAME`, `CATEGORY`, `TARGETS`, `STEPS` を編集
+3. `SETTING_RECIPE = 'my_recipe'` で指定
+
+詳細は `USER_RECIPE_GUIDE.md` を参照してください。
+
+## 更新履歴
+
+### v1.9.0
+- レシピを外部ファイル化（`recipes/` ディレクトリ内の `.py` ファイルから読み込み）
+- ユーザーが独自レシピを作成できる機能を追加
+- レシピの動的検出機能を実装
+- `TARGETS` フィールドを追加して、レシピが対象とするもの（色違い・どうぐパワー）を明確化
+- `USER_RECIPE_GUIDE.md` を追加して、独自レシピ作成ガイドを提供
+
+### v1.8.14 (以前)
+- 色違い厳選レシピ4 (shiny4) を追加
+- recipe3レシピを追加
+- デバック機能の修正
+- エリア判定を追加

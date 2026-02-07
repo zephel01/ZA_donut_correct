@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.8.14 (Custom Updated)
+ZA ドーナツ厳選 v1.9.0 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -19,9 +19,14 @@ ZA ドーナツ厳選 v1.8.14 (Custom Updated)
 ・recipe3レシピを追加 (Update)
 ・デバック機能の修正
 ・エリア判定の追加(New))
+・レシピを外部ファイル化（recipes/ディレクトリ内の.pyファイルから読み込み）(Update v1.9.0)
+・ユーザーが独自レシピを作成できる機能を追加 (Update v1.9.0)
+・レシピの動的検出機能を実装 (Update v1.9.0)
+・TARGETSフィールドを追加して、レシピが対象とするもの（色違い・どうぐパワー）を明確化 (Update v1.9.0)
 """
 
 import os
+import importlib.util
 import cv2
 import numpy as np
 import time
@@ -34,9 +39,10 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.8.14'
+VERSION = '1.9.0'
 
 # 【1. レベル/レシピ指定】
+#   recipes/ ディレクトリ内の .py ファイルを自動検出します
 #   'shiny1'   : 色違い厳選レシピ1 (節約版)
 #   'shiny2'   : 色違い厳選レシピ2 (タンガのみｘ8)
 #   'shiny3'   : 色違い厳選レシピ3 (ほかくパワー付与レシピ)
@@ -44,9 +50,10 @@ VERSION = '1.8.14'
 #   'recipe1'  : どうぐパワー節約レシピ
 #   'recipe2'  : どうぐパワー重視レシピ/カシブx8
 #   'recipe3'  : 節約レシピ recipe3
-#   'rainbow1' : バコウ1,ウタン1,ナモ4,ロゼル2
-#   'rainbow2' : バコウ1,ヨロギ1,ハバン1,ロゼル5
-#   'rainbow3' : ウタン1,ヨロギ1,ナモ4,ロゼル2
+#   'rainbow1' : バコウ1,ウタン1,ナモ4,ロゼル2 (TARGETS=['tool'])
+#   'rainbow2' : バコウ1,ヨロギ1,ハバン1,ロゼル5 (TARGETS=['tool'])
+#   'rainbow3' : ウタン1,ヨロギ1,ナモ4,ロゼル2 (TARGETS=['tool'])
+#   my_recipe  : recipes/ ディレクトリに追加した独自レシピ
 SETTING_RECIPE = 'recipe1'
 
 # 【2. ポケモンのタイプ】(shiny系用)
@@ -189,23 +196,112 @@ except:
 
 ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', str(SETTING_CAPTURE_COMPROMISE)).lower() == 'true' else False
 
+
+# =============================================================================
+# 動的レシピ検出機能
+# =============================================================================
+# レシピ管理機能
+# =============================================================================
+def get_valid_recipes():
+    """
+    recipes/ ディレクトリ内のレシピファイルをスキャンして有効なレシピ名を返す
+
+    Returns:
+        list: 有効なレシピ名のリスト（拡張子なし）
+    """
+    recipe_dir = 'recipes'
+    valid_recipes = []
+
+    if os.path.exists(recipe_dir):
+        for filename in os.listdir(recipe_dir):
+            if filename.endswith('.py') and filename != 'template.py':
+                recipe_name = filename[:-3]  # .py を除去
+                valid_recipes.append(recipe_name)
+
+    return sorted(valid_recipes)
+
+
+def load_recipe(recipe_name):
+    """
+    レシピファイルを読み込む関数
+
+    Args:
+        recipe_name: レシピ名（拡張子なし）
+
+    Returns:
+        dict: レシピデータ
+
+    Raises:
+        FileNotFoundError: レシピファイルが見つからない場合
+        AttributeError: レシピモジュールに必須属性がない場合
+    """
+    recipe_dir = 'recipes'
+    recipe_file = os.path.join(recipe_dir, f'{recipe_name}.py')
+
+    if not os.path.exists(recipe_file):
+        raise FileNotFoundError(f"レシピファイルが見つかりません: {recipe_file}")
+
+    spec = importlib.util.spec_from_file_location(recipe_name, recipe_file)
+    recipe_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(recipe_module)
+
+    # バリデーション
+    if not hasattr(recipe_module, 'NAME'):
+        raise AttributeError(f"レシピファイルに 'NAME' が含まれていません: {recipe_file}")
+    if not hasattr(recipe_module, 'STEPS'):
+        raise AttributeError(f"レシピファイルに 'STEPS' が含まれていません: {recipe_file}")
+    if not hasattr(recipe_module, 'TARGETS'):
+        raise AttributeError(f"レシピファイルに 'TARGETS' が含まれていません: {recipe_file}")
+
+    return {
+        'name': getattr(recipe_module, 'NAME', recipe_name),
+        'category': getattr(recipe_module, 'CATEGORY', 'custom'),
+        'targets': getattr(recipe_module, 'TARGETS', []),
+        'steps': getattr(recipe_module, 'STEPS', [])
+    }
+
+
+
 # 有効性チェック
-valid_recipes = ['recipe1', 'recipe2', 'recipe3', 'shiny1', 'shiny2', 'shiny3', 'shiny4', 'rainbow1', 'rainbow2', 'rainbow3']
+valid_recipes = get_valid_recipes()
+
+# デバッグ用：有効なレシピを表示
+if valid_recipes:
+    print(f"[System] Available recipes: {', '.join(valid_recipes)}")
+
 if ENV_RECIPE not in valid_recipes:
+    # 既存の振り分けロジックを維持（後方互換性）
     if 'shiny' in ENV_RECIPE:
-        if '4' in ENV_RECIPE: ENV_RECIPE = 'shiny4'
-        elif '3' in ENV_RECIPE: ENV_RECIPE = 'shiny3'
-        elif '1' in ENV_RECIPE: ENV_RECIPE = 'shiny1'
-        else: ENV_RECIPE = 'shiny2'
+        if '4' in ENV_RECIPE:
+            ENV_RECIPE = 'shiny4'
+        elif '3' in ENV_RECIPE:
+            ENV_RECIPE = 'shiny3'
+        elif '1' in ENV_RECIPE:
+            ENV_RECIPE = 'shiny1'
+        else:
+            ENV_RECIPE = 'shiny2'
     elif 'rainbow' in ENV_RECIPE:
-        if '2' in ENV_RECIPE: ENV_RECIPE = 'rainbow2'
-        elif '3' in ENV_RECIPE: ENV_RECIPE = 'rainbow3'
-        else: ENV_RECIPE = 'rainbow1'
+        if '2' in ENV_RECIPE:
+            ENV_RECIPE = 'rainbow2'
+        elif '3' in ENV_RECIPE:
+            ENV_RECIPE = 'rainbow3'
+        else:
+            ENV_RECIPE = 'rainbow1'
     elif '2' in ENV_RECIPE:
         ENV_RECIPE = 'recipe2'
     else:
         ENV_RECIPE = 'recipe1'
-    print(f"[System] Mode Adjusted -> {ENV_RECIPE}")
+
+    # 振り分け後のレシピが有効かチェック
+    if ENV_RECIPE in valid_recipes:
+        print(f"[System] Mode Adjusted -> {ENV_RECIPE}")
+    else:
+        print(f"[System] Recipe '{ENV_RECIPE}' not found in available recipes")
+        print(f"[System] Available recipes: {', '.join(valid_recipes)}")
+
+# レシピをロードして、現在のレシピデータを保持
+CURRENT_RECIPE = load_recipe(ENV_RECIPE)
+print(f"[System] Recipe loaded: {CURRENT_RECIPE['name']} (targets: {', '.join(CURRENT_RECIPE['targets'])})")
 
 valid_sizes = ['oyabun', 'big', 'small']
 if SIZE not in valid_sizes:
@@ -227,10 +323,11 @@ CAPTURE_DIR = "debug_captures"
 os.makedirs(CAPTURE_DIR, exist_ok=True)
 
 # --- コマンド名(NAME)の動的生成 ---
-if 'shiny' in ENV_RECIPE:
+if 'shiny' in CURRENT_RECIPE['targets']:
     CMD_NAME_SUFFIX = f"({ENV_RECIPE.capitalize()}/Type=[{TARGET_TYPE_Display}]/{SIZE})"
 else:
     CMD_NAME_SUFFIX = f"({ENV_RECIPE.capitalize()}/{INPUT_ITEM_CLASS})"
+
 
 class ZA_DonutV188(ImageProcPythonCommand):
     NAME = f"ZA ドーナツ厳選 {CMD_NAME_SUFFIX} v{VERSION}"
@@ -245,7 +342,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
     DEBUG_LOG = DEBUG_LOG
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    FOLDER = os.path.abspath(os.path.join(SCRIPT_DIR, '../../../Template/LegendsZA'))
+    FOLDER = os.path.abspath(os.path.join(SCRIPT_DIR, 'LegendsZA'))
 
     def __init__(self, cam, preview=None):
         super().__init__(cam)
@@ -297,7 +394,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             'lv3': 'lv3.png',
             'result_text': 'result_text.png'
         }
-        if 'shiny' in ENV_RECIPE:
+        if 'shiny' in CURRENT_RECIPE['targets']:
             files['shiny_label'] = 'shiny_label.png'
             files['type_all'] = 'Type_All.png'
             files['lbl_oyabun'] = 'oyabun_label.png'
@@ -324,8 +421,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
         print(f"[System] Version: {VERSION}")
         print(f"[System] Recipe: {ENV_RECIPE}")
         print(f"[System] Timing Mode: {TIMING_MODE}")
-        
-        if 'shiny' in ENV_RECIPE:
+
+        if 'shiny' in CURRENT_RECIPE['targets']:
             print(f"[System] Target: {ENV_RECIPE} + Type=[{TARGET_TYPE_Display}] + {SIZE}")
             print(f"[System] AnyTypeOyabunStop: {ENABLE_ANY_TYPE_OYABUN}")
             if ENABLE_CAPTURE_POWER:
@@ -344,7 +441,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         if self.templates.get('result_text') is None:
             print("[Warning] 'result_text.png' not found. Fallback to fixed timing.")
 
-        if ENABLE_CROSS_MATCH and 'shiny' not in ENV_RECIPE:
+        if ENABLE_CROSS_MATCH and 'shiny' not in CURRENT_RECIPE['targets']:
             c_fname = None
             if INPUT_ITEM_CLASS == 'ball':
                 c_fname = 'class_kinomi.png'
@@ -544,89 +641,26 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.wait(2.0)
 
     def _input_recipe(self):
-        if ENV_RECIPE == 'shiny1':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=5, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
+        """
+        外部ファイルから読み込んだレシピを実行するメソッド
+        """
+        try:
+            recipe_name = CURRENT_RECIPE['name']
+            self.log(f"レシピ入力: {ENV_RECIPE} ({recipe_name})")
 
-        elif ENV_RECIPE == 'shiny2':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=8, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=8, duration=0.1, interval=0.1)
+            for step in CURRENT_RECIPE['steps']:
+                if step['action'] == 'pressRep':
+                    self.pressRep(
+                        step['type'],
+                        repeat=step['repeat'],
+                        duration=step['duration'],
+                        interval=step['interval']
+                    )
 
-        elif ENV_RECIPE == 'shiny3':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=5, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=6, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=2, duration=0.1, interval=0.1)
+        except Exception as e:
+            self.log(f"レシピ実行エラー: {e}")
+            raise
 
-        elif ENV_RECIPE == 'shiny4':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=5, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=6, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=4, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=5, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-
-        elif ENV_RECIPE == 'recipe1':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=3, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=2, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
-
-        elif ENV_RECIPE == 'recipe2':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=6, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=8, duration=0.1, interval=0.1)
-
-        elif ENV_RECIPE == 'recipe3':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=2, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=3, duration=0.1, interval=0.1)
-
-        elif ENV_RECIPE == 'rainbow1':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=2, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=5, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-
-        elif ENV_RECIPE == 'rainbow2':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=5, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=4, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=2, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-
-        elif ENV_RECIPE == 'rainbow3':
-            self.log(f"レシピ入力: {ENV_RECIPE}")
-            self.pressRep(Hat.TOP, repeat=1, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=2, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=4, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=3, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
-            self.pressRep(Hat.TOP, repeat=2, duration=0.05, interval=0.1)
-            self.pressRep(Button.A, repeat=1, duration=0.1, interval=0.1)
 
     def retry_creation(self):
         self.log(f"リトライ操作実行 ({TIMING_MODE})")
@@ -678,7 +712,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         res1_lvl = None
         s1 = 0.0
 
-        if 'shiny' in ENV_RECIPE:
+        if 'shiny' in CURRENT_RECIPE['targets']:
             l1_n = f"Size({SIZE})"
             res1_lvl, s1 = self.detect_power_level(gray, 'size_label', TARGETS_SIZE)
         else:
@@ -691,8 +725,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
         res2_lvl = None
         s2 = 0.0
         matched_type_name = None
-        
-        if 'shiny' in ENV_RECIPE:
+
+        if 'shiny' in CURRENT_RECIPE['targets']:
             # 複数タイプ対応ロジック
             max_fail_score = 0.0
             
@@ -736,7 +770,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 gray, 'tool_label', 'target_icon', TARGETS_EXTRA
             )
 
-        if ENABLE_CROSS_MATCH and ('shiny' not in ENV_RECIPE) and \
+        if ENABLE_CROSS_MATCH and ('shiny' not in CURRENT_RECIPE['targets']) and \
            (res1_lvl is not None) and (res2_lvl is None) and (self.cross_icon_key is not None):
             cross_targets = ['lv3']
             l2_cross_n = f"Cross({self.cross_icon_key})"
@@ -750,7 +784,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 s2 = c_score
                 l2_n += f" -> {l2_cross_n}"
 
-        if 'shiny' in ENV_RECIPE and (res2_lvl is not None) and (res1_lvl is None):
+        if 'shiny' in CURRENT_RECIPE['targets'] and (res2_lvl is not None) and (res1_lvl is None):
             cross_size_candidates = []
             if ENABLE_CROSS_OYABUN: cross_size_candidates.append(('lbl_oyabun', 'Oyabun'))
             if ENABLE_CROSS_BIG:    cross_size_candidates.append(('lbl_big',    'Big'))
@@ -792,7 +826,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         l3_n = "ほかく"
         capture_matched_type = None
 
-        if 'shiny' in ENV_RECIPE and ENABLE_CAPTURE_POWER:
+        if 'shiny' in CURRENT_RECIPE['targets'] and ENABLE_CAPTURE_POWER:
             # まず「すべて」(Type_All2)をチェック
             res3_lvl, s3 = self.detect_power_icon_level(gray, 'capture_label', 'type_all2', TARGETS_CAPTURE)
             if res3_lvl is not None:
@@ -830,7 +864,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.log(f"判定: {l1_n}[{str1}]({s1:.2f}) / {l2_n}[{str2}]({s2:.2f})")
 
         # 特別終了条件(1): 非shinyモードでのどうぐパワー単独終了
-        if ('shiny' not in ENV_RECIPE) and ENABLE_TOOL_ONLY_STOP and (res2_lvl is not None):
+        if ('shiny' not in CURRENT_RECIPE['targets']) and ENABLE_TOOL_ONLY_STOP and (res2_lvl is not None):
             self.log(f"★ 特別終了条件: どうぐパワー単独条件クリア ({l2_n}: {res2_lvl})")
             return True
         
@@ -849,7 +883,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
     def do(self):
         self.log(f"=== ZA ドーナツ v{VERSION} ({ENV_RECIPE}) ===")
-        if 'shiny' in ENV_RECIPE:
+        if 'shiny' in CURRENT_RECIPE['targets']:
             self.log(f"Target: {ENV_RECIPE} + Type=[{TARGET_TYPE_Display}] & {SIZE}")
         else:
             self.log(f"Target: Tool/{INPUT_ITEM_CLASS} & Dosari")

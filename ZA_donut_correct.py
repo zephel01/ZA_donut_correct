@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.2 (Custom Updated)
+ZA ドーナツ厳選 v1.9.3 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -28,6 +28,7 @@ ZA ドーナツ厳選 v1.9.2 (Custom Updated)
 ・複数タイプ指定に対応（配列形式 ["Fire", "Ground"]）(Update v1.9.1)
 ・カスタム条件のバグ修正（attribute: null時にType_Allを優先チェック）(Update v1.9.2)
 ・複数の「かがやきパワー」がある場合、全てのマッチング位置をチェックするように修正 (Update v1.9.2)
+・目標達成後ループ機能を追加 (Update v1.9.3)
 """
 
 import os
@@ -97,6 +98,13 @@ SETTING_THRESHOLD_RESULT = 0.80 # 結果画面検知のしきい値
 SETTING_MAX_LOOP    = 999999
 SETTING_RETRY_LIMIT = 2
 SETTING_DEBUG_LOG   = True # デバッグログをデフォルトで有効化
+
+# 【10. 目標達成後ループ設定】
+# -----------------------------------------------------------------------------
+# 目標達成後に再度ドーナツ作成を行うモード（True/False）
+SETTING_ENABLE_LOOP_AFTER_SUCCESS = False
+# 目標達成後の最大ループ回数
+SETTING_LOOP_AFTER_SUCCESS_MAX = 1
 
 # 【7. クロス判定設定 (互換/妥協機能)】
 # -----------------------------------------------------------------------------
@@ -191,6 +199,10 @@ MAX_LOOP    = int(os.environ.get('MAX_LOOP', SETTING_MAX_LOOP))
 RETRY_LIMIT = int(os.environ.get('RETRY_LIMIT', SETTING_RETRY_LIMIT))
 DEBUG_LOG_STR = os.environ.get('DEBUG_LOG', str(SETTING_DEBUG_LOG)).lower()
 DEBUG_LOG   = True if DEBUG_LOG_STR == 'true' else False
+
+# 目標達成後ループ設定の読み込み
+ENABLE_LOOP_AFTER_SUCCESS = True if os.environ.get('ENABLE_LOOP_AFTER_SUCCESS', str(SETTING_ENABLE_LOOP_AFTER_SUCCESS)).lower() == 'true' else False
+LOOP_AFTER_SUCCESS_MAX = int(os.environ.get('LOOP_AFTER_SUCCESS_MAX', str(SETTING_LOOP_AFTER_SUCCESS_MAX)))
 
 # --- クロス機能の設定読み込み ---
 ENABLE_CROSS_MATCH = True if os.environ.get('ENABLE_CROSS_MATCH', str(SETTING_CROSS_MATCH)).lower() == 'true' else False
@@ -406,6 +418,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
     MAX_LOOP = MAX_LOOP
     RETRY_LIMIT = RETRY_LIMIT
     DEBUG_LOG = DEBUG_LOG
+    ENABLE_LOOP_AFTER_SUCCESS = ENABLE_LOOP_AFTER_SUCCESS
+    LOOP_AFTER_SUCCESS_MAX = LOOP_AFTER_SUCCESS_MAX
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     FOLDER = os.path.abspath(os.path.join(SCRIPT_DIR, 'LegendsZA'))
@@ -416,6 +430,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.templates = {}
         self.cross_icon_key = None
         self._load_templates()
+        self.success_count = 0  # 目標達成回数
 
     def log(self, msg):
         now = datetime.now().strftime("%H:%M:%S")
@@ -1026,6 +1041,25 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.debug_log("Wait 4.0s (Refresh)")
             self.wait(4.0)
 
+    def moveToPokemonCenter(self):
+        """
+        ポケモンセンター（ベール）へ移動してセーブするメソッド
+        """
+        self.log("ポケモンセンター（ベール）へ移動してセーブします")
+
+        # メニューを開く
+        self.press(Button.PLUS, 0.2, 1.0)
+        # 地図を開く
+        self.press(Button.Y, 0.2, 1.0)
+        # カーソルを下に4回移動（ベールへ）
+        self.pressRep(Hat.BTM, repeat=4, duration=0.1, interval=0.1)
+        # 決定
+        self.press(Button.A, 0.2, 1.5)
+        # 空中移動待機
+        self.wait(4.0)
+
+        self.log("セーブ完了、ポケモンセンター移動終了")
+
     def backupRestart(self):
         self.log(f"リセットシーケンス ({TIMING_MODE})")
         
@@ -1243,28 +1277,54 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.log(f"Timing Mode: {TIMING_MODE}")
         if ENABLE_CUSTOM_CONDITIONS:
             self.log(f"Custom Conditions: {len(CUSTOM_CONDITIONS)} loaded")
-        
+
+        # 目標達成後ループ設定の表示
+        if self.ENABLE_LOOP_AFTER_SUCCESS:
+            self.log(f"目標達成後ループ: 有効 (最大 {self.LOOP_AFTER_SUCCESS_MAX} 回)")
+        else:
+            self.log("目標達成後ループ: 無効")
+
         while self.count < self.MAX_LOOP:
             self.count += 1
             self.makeDonut()
-            
+
             if self.checkDonutResult():
-                self.log("★★★ 目標達成！(初回) ★★★")
+                self.success_count += 1
+                self.log(f"★★★ 目標達成！(回数: {self.success_count}/{self.LOOP_AFTER_SUCCESS_MAX}) ★★★")
                 self.save_capture("SUCCESS")
-                self.finish()
-                break
-            
+
+                # 目標達成後ループ機能の判定
+                if self.ENABLE_LOOP_AFTER_SUCCESS and self.success_count < self.LOOP_AFTER_SUCCESS_MAX:
+                    self.log("目標達成後ループ機能：ポケモンセンターへ移動してセーブします")
+                    self.moveToPokemonCenter()
+                    self.log("ドーナツ作成を再開します")
+                    continue
+                else:
+                    self.finish()
+                    break
+
             retry_success = False
             for i in range(self.RETRY_LIMIT):
                 self.log(f"--- Retry {i+1}/{self.RETRY_LIMIT} ---")
                 self.retry_creation()
                 if self.checkDonutResult():
-                    self.log(f"★★★ 目標達成！(Retry {i+1}) ★★★")
+                    self.success_count += 1
+                    self.log(f"★★★ 目標達成！(Retry {i+1}, 回数: {self.success_count}/{self.LOOP_AFTER_SUCCESS_MAX}) ★★★")
                     self.save_capture("SUCCESS")
                     retry_success = True
-                    break
-            
+
+                    # 目標達成後ループ機能の判定
+                    if self.ENABLE_LOOP_AFTER_SUCCESS and self.success_count < self.LOOP_AFTER_SUCCESS_MAX:
+                        self.log("目標達成後ループ機能：ポケモンセンターへ移動してセーブします")
+                        self.moveToPokemonCenter()
+                        self.log("ドーナツ作成を再開します")
+                        break
+                    else:
+                        break
+
             if retry_success:
+                if self.ENABLE_LOOP_AFTER_SUCCESS and self.success_count < self.LOOP_AFTER_SUCCESS_MAX:
+                    continue
                 self.finish()
                 break
             else:

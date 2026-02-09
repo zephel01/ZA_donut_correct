@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.1 (Custom Updated)
+ZA ドーナツ厳選 v1.9.2 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -26,6 +26,8 @@ ZA ドーナツ厳選 v1.9.1 (Custom Updated)
 ・カスタム条件ファイルによる特別終了機能を追加 (Update v1.9.1)
 ・モード別条件対応（shinyモード：かがやき×サイズ、toolモード：どうぐ×どっさり）(Update v1.9.1)
 ・複数タイプ指定に対応（配列形式 ["Fire", "Ground"]）(Update v1.9.1)
+・カスタム条件のバグ修正（attribute: null時にType_Allを優先チェック）(Update v1.9.2)
+・複数の「かがやきパワー」がある場合、全てのマッチング位置をチェックするように修正 (Update v1.9.2)
 """
 
 import os
@@ -43,7 +45,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.9.1'
+VERSION = '1.9.2'
 
 # 【1. レベル/レシピ指定】
 #   recipes/ ディレクトリ内の .py ファイルを自動検出します
@@ -595,39 +597,93 @@ class ZA_DonutV188(ImageProcPythonCommand):
         best_lvl, best_score = self._detect_level_in_roi(roi_img, target_levels)
         return best_lvl, best_score
 
-    def detect_power_icon_level(self, gray_screen, label_key, icon_key, target_levels, backup_icon_key=None):
+    def detect_power_icon_level(self, gray_screen, label_key, icon_key, target_levels, backup_icon_key=None, check_all_matches=False):
+        """
+        パワーアイコンとレベルを検出
+
+        Args:
+            gray_screen: グレースケール画像
+            label_key: ラベルテンプレートのキー
+            icon_key: アイコンテンプレートのキー
+            target_levels: 対象レベルリスト
+            backup_icon_key: バックアップアイコンキー
+            check_all_matches: 全てのマッチング位置をチェックするか（複数のパワーがある場合用）
+
+        Returns:
+            tuple: (レベル, スコア)
+        """
         label_tmpl = self.templates.get(label_key)
         if label_tmpl is None: return None, 0.0
         res = cv2.matchTemplate(gray_screen, label_tmpl, cv2.TM_CCOEFF_NORMED)
-        _, l_score, _, loc = cv2.minMaxLoc(res)
-        if l_score < self.THRESHOLD_LABEL: return None, l_score
-        h, w = gray_screen.shape[:2]
-        tw, th = label_tmpl.shape[::-1]
-        roi_y_start = max(0, loc[1] - 10)
-        roi_y_end   = min(h, loc[1] + th + 10)
-        roi_x_start = loc[0] + tw
-        roi_x_end   = min(w, roi_x_start + 250)
-        roi_img = gray_screen[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
-        icon_matched = False
-        t_score = 0.0
-        icon_tmpl = self.templates.get(icon_key)
-        if icon_tmpl is not None:
-            res_t = cv2.matchTemplate(roi_img, icon_tmpl, cv2.TM_CCOEFF_NORMED)
-            _, t_score, _, _ = cv2.minMaxLoc(res_t)
-            if t_score >= self.THRESHOLD_ICON: icon_matched = True
-        
-        if not icon_matched and backup_icon_key:
-            backup_tmpl = self.templates.get(backup_icon_key)
-            if backup_tmpl is not None:
-                res_b = cv2.matchTemplate(roi_img, backup_tmpl, cv2.TM_CCOEFF_NORMED)
-                _, b_score, _, _ = cv2.minMaxLoc(res_b)
-                if b_score >= self.THRESHOLD_ICON:
-                    icon_matched = True
-                    t_score = b_score
-        
-        if not icon_matched: return None, t_score
-        best_lvl, best_lvl_score = self._detect_level_in_roi(roi_img, target_levels)
-        return best_lvl, best_lvl_score
+
+        if check_all_matches:
+            # 全てのマッチング位置をチェック
+            locs = np.where(res >= self.THRESHOLD_LABEL)
+            h, w = gray_screen.shape[:2]
+            tw, th = label_tmpl.shape[::-1]
+            icon_tmpl = self.templates.get(icon_key)
+
+            # マッチング位置をスコア順にソート
+            matches = []
+            for pt in zip(*locs[::-1]):
+                score = res[pt[1], pt[0]]
+                matches.append((score, pt))
+
+            # スコア降順でソート
+            matches.sort(reverse=True, key=lambda x: x[0])
+
+            # 各マッチング位置でチェック
+            for l_score, loc in matches:
+                # ROI設定
+                roi_y_start = max(0, loc[1] - 10)
+                roi_y_end   = min(h, loc[1] + th + 10)
+                roi_x_start = loc[0] + tw
+                roi_x_end   = min(w, roi_x_start + 250)
+                roi_img = gray_screen[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
+
+                # アイコンチェック
+                if icon_tmpl is not None:
+                    res_t = cv2.matchTemplate(roi_img, icon_tmpl, cv2.TM_CCOEFF_NORMED)
+                    _, t_score, _, _ = cv2.minMaxLoc(res_t)
+                    if t_score >= self.THRESHOLD_ICON:
+                        # レベルチェック
+                        best_lvl, best_lvl_score = self._detect_level_in_roi(roi_img, target_levels)
+                        if best_lvl is not None:
+                            self.debug_log(f"[MultiMatch] Found {icon_key} at ({loc[0]}, {loc[1]}): {best_lvl} (label={l_score:.2f}, icon={t_score:.2f})")
+                            return best_lvl, t_score
+
+            return None, 0.0
+        else:
+            # 従来の単一マッチング（最も高いスコアの位置のみ）
+            _, l_score, _, loc = cv2.minMaxLoc(res)
+            if l_score < self.THRESHOLD_LABEL: return None, l_score
+            h, w = gray_screen.shape[:2]
+            tw, th = label_tmpl.shape[::-1]
+            roi_y_start = max(0, loc[1] - 10)
+            roi_y_end   = min(h, loc[1] + th + 10)
+            roi_x_start = loc[0] + tw
+            roi_x_end   = min(w, roi_x_start + 250)
+            roi_img = gray_screen[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
+            icon_matched = False
+            t_score = 0.0
+            icon_tmpl = self.templates.get(icon_key)
+            if icon_tmpl is not None:
+                res_t = cv2.matchTemplate(roi_img, icon_tmpl, cv2.TM_CCOEFF_NORMED)
+                _, t_score, _, _ = cv2.minMaxLoc(res_t)
+                if t_score >= self.THRESHOLD_ICON: icon_matched = True
+
+            if not icon_matched and backup_icon_key:
+                backup_tmpl = self.templates.get(backup_icon_key)
+                if backup_tmpl is not None:
+                    res_b = cv2.matchTemplate(roi_img, backup_tmpl, cv2.TM_CCOEFF_NORMED)
+                    _, b_score, _, _ = cv2.minMaxLoc(res_b)
+                    if b_score >= self.THRESHOLD_ICON:
+                        icon_matched = True
+                        t_score = b_score
+
+            if not icon_matched: return None, t_score
+            best_lvl, best_lvl_score = self._detect_level_in_roi(roi_img, target_levels)
+            return best_lvl, best_lvl_score
 
     def _detect_level_in_roi(self, roi_img, target_levels):
         rh, rw = roi_img.shape[:2]
@@ -656,13 +712,17 @@ class ZA_DonutV188(ImageProcPythonCommand):
         Returns:
             tuple: (成功フラグ, 検出情報辞書)
         """
+        self.debug_log(f"[CustomCondition] Checking condition: {condition['name']}")
+
         # Power1 のチェック
         p1 = condition['power1']
         p1_result = self._check_single_power(gray_screen, p1)
+        self.debug_log(f"[CustomCondition] Power1: {p1_result['info']}[{p1_result['level']}] (success={p1_result['success']}, score={p1_result['score']:.2f})")
 
         # Power2 のチェック
         p2 = condition['power2']
         p2_result = self._check_single_power(gray_screen, p2)
+        self.debug_log(f"[CustomCondition] Power2: {p2_result['info']}[{p2_result['level']}] (success={p2_result['success']}, score={p2_result['score']:.2f})")
 
         # 両方のパワーが条件を満たしているかチェック
         success = p1_result['success'] and p2_result['success']
@@ -678,6 +738,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 'detected': p2_result
             }
         }
+
+        self.debug_log(f"[CustomCondition] Result: {success} (p1_success={p1_result['success']}, p2_success={p2_result['success']})")
 
         return success, detected_info
 
@@ -719,23 +781,27 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels)
                 info = f"かがやき({attribute})"
             else:
-                # 全タイプチェック
-                # 1. ターゲットタイプを順にチェック
-                lvl, score = None, 0.0
-                for t_name in TARGET_TYPES:
-                    key = f"target_icon_{t_name}"
-                    lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels)
-                    if lvl is not None:
-                        info = f"かがやき({t_name})"
-                        break
+                # 全タイプチェック（タイプ不問）
+                # 複数の「かがやきパワー」がある場合、全てのマッチング位置をチェック
+                self.debug_log(f"[CustomCondition] Checking all shiny powers (target levels: {target_levels})")
 
-                # 2. Type_All チェック
-                if lvl is None:
-                    lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', 'type_all', target_levels)
-                    if lvl is not None:
-                        info = "かがやき(All)"
-                    else:
+                # Type_Allを優先的にチェック
+                lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', 'type_all', target_levels, check_all_matches=True)
+                if lvl is not None:
+                    info = "かがやき(All)"
+                    self.debug_log(f"[CustomCondition] Found Type_All: {lvl} (score={score:.2f})")
+                else:
+                    # Type_Allが見つからなければターゲットタイプを順にチェック
+                    for t_name in TARGET_TYPES:
+                        key = f"target_icon_{t_name}"
+                        lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels, check_all_matches=True)
+                        if lvl is not None:
+                            info = f"かがやき({t_name})"
+                            self.debug_log(f"[CustomCondition] Found Type_{t_name}: {lvl} (score={score:.2f})")
+                            break
+                    if lvl is None:
                         info = "かがやき(N/A)"
+                        self.debug_log(f"[CustomCondition] No matching shiny power found")
 
         elif power_type == 'size':
             # サイズパワーチェック

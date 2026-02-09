@@ -362,7 +362,283 @@
  2. 相手は `recipes/` ディレクトリに配置
  3. プログラム実行時にレシピ名を指定
  
- ## カスタム条件ファイルについて
- 
- カスタム条件ファイル（`donut_conditions.json`）を使用すると、特定のパワー組み合わせを自動で検知して終了することができます。
- 詳細は `README.md` の「4. カスタム条件機能」セクションを参照してください。
+## カスタム条件ファイルについて
+
+カスタム条件ファイル（`donut_conditions.json`）を使用すると、特定のパワー組み合わせを自動で検知して終了することができます。
+詳細は `README.md` の「4. カスタム条件機能」セクションを参照してください。
+
+### ファイル概要
+
+`donut_conditions.json` は、ドーナツ作成時のパワー条件を定義するJSONファイルです。
+- ファイル名: `donut_conditions.json`
+- 配置場所: `ZA_donut_correct.py` と同じディレクトリ
+- エンコード: UTF-8
+
+### JSON構造
+
+```json
+{
+  "_comment": "コメント",
+  "_description": "説明",
+  "_note": "補足情報",
+  "shiny_conditions": [
+    {
+      "name": "条件名",
+      "_description": "条件の説明",
+      "_note": "補足説明",
+      "power1": { ... },
+      "power2": { ... },
+      "power3": { ... },  // 省略可能
+      "enabled": true
+    }
+  ],
+  "tool_conditions": [
+    {
+      "name": "条件名",
+      "_description": "条件の説明",
+      "_note": "補足説明",
+      "power1": { ... },
+      "power2": { ... },
+      "power3": { ... },  // 省略可能
+      "enabled": true
+    }
+  ]
+}
+```
+
+### モード別条件
+
+| セクション名 | 対応モード | 説明 |
+|-------------|-----------|------|
+| `shiny_conditions` | shiny系モード | 色違い厳選モード（shiny1-4）で使用 |
+| `tool_conditions` | どうぐパワーモード | レシピ/レインボーモード（recipe1-3, rainbow1-3）で使用 |
+
+### 条件の有効化
+
+各条件には `"enabled"` フィールドがあります：
+- `true`: 条件が有効になり、一致すると終了
+- `false`: 条件が無効になり、チェックされない
+- 省略: デフォルトで `true` として扱われる
+
+### 複数条件の判定
+
+カスタム条件はリスト順にチェックされ、最初に一致した条件で終了します。
+- 複数の条件を有効にした場合、上から順にチェック
+- 条件に優先順位を持たせたい場合は、リストの順序を調整
+
+### パワーテンプレートの詳細（5種類）
+
+カスタム条件では以下の5種類のパワーテンプレートを使用できます。
+
+#### 1. かがやきパワー (shiny)
+
+かがやきパワーのレベルとタイプを判定します。
+
+| パラメータ | 説明 | 指定可能な値 |
+|-----------|------|----------------|
+| `type` | パワータイプ | `"shiny"` (固定) |
+| `attribute` | タイプ指定 | `null` (タイプ不問) または タイプ名 (`"Fire"`, `"Water"`, 等) または タイプ配列 (`["Fire", "Ground"]`) |
+| `min_level` | 目標レベル | `1` (妥協), `2`, `3` (厳選) |
+
+**タイプ指定の例:**
+```json
+// タイプ不問
+"attribute": null
+
+// 単一タイプ
+"attribute": "Fire"
+
+// 複数タイプ
+"attribute": ["Fire", "Ground"]
+```
+
+**対応タイプ一覧:**
+Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy
+
+#### 2. サイズパワー (size)
+
+サイズパワーの種類とレベルを判定します。
+
+| パラメータ | 説明 | 指定可能な値 |
+|-----------|------|----------------|
+| `type` | パワータイプ | `"size"` (固定) |
+| `size` | サイズ種類 | `"oyabun"` (オヤブン), `"big"` (でかでか), `"small"` (ちびちび) |
+| `min_level` | 目標レベル | `1` (妥協), `2`, `3` (厳選) |
+
+#### 3. ほかくパワー (capture)
+
+ほかくパワーのレベルとタイプを判定します。
+
+| パラメータ | 説明 | 指定可能な値 |
+|-----------|------|----------------|
+| `type` | パワータイプ | `"capture"` (固定) |
+| `attribute` | タイプ指定 | `null` (タイプ不問) または タイプ名 (`"Fire"`, `"Water"`, 等) または タイプ配列 (`["Fire", "Ground"]`) |
+| `min_level` | 目標レベル | `1` (妥協), `2`, `3` (厳選) |
+
+**タイプ指定の例:**
+```json
+// タイプ不問
+"attribute": null
+
+// 単一タイプ
+"attribute": "Fire"
+
+// 複数タイプ
+"attribute": ["Fire", "Ground"]
+```
+
+#### 4. どうぐパワー (tool)
+
+どうぐパワーのクラスとレベルを判定します。
+
+| パラメータ | 説明 | 指定可能な値 |
+|-----------|------|----------------|
+| `type` | パワータイプ | `"tool"` (固定) |
+| `class` | アイテムクラス | `"kinomi"` (きのみ), `"ball"` (ボール), `"coin"` (コイン), `"treasure"` (宝物), `"special"` (特別), `"candy"` (アメ) |
+| `min_level` | 目標レベル | `1` (妥協), `2`, `3` (厳選) |
+
+#### 5. どっさりパワー (dosari)
+
+どっさりパワーのレベルを判定します。
+
+| パラメータ | 説明 | 指定可能な値 |
+|-----------|------|----------------|
+| `type` | パワータイプ | `"dosari"` (固定) |
+| `min_level` | 目標レベル | `1` (妥協), `2`, `3` (厳選) |
+
+### 3パワー構造 (power3の使用)
+
+カスタム条件では、最大3つのパワーを同時に指定できます。
+
+#### 構造
+
+```json
+{
+  "name": "条件名",
+  "power1": { ... },  // 必須
+  "power2": { ... },  // 必須
+  "power3": { ... }   // 省略可能
+}
+```
+
+#### 使用例 (3パワー)
+
+```json
+{
+  "name": "かがやき＋サイズ＋ほかく",
+  "power1": {
+    "type": "shiny",
+    "attribute": null,
+    "min_level": 3
+  },
+  "power2": {
+    "type": "size",
+    "size": "small",
+    "min_level": 3
+  },
+  "power3": {
+    "type": "capture",
+    "attribute": null,
+    "min_level": 1
+  },
+  "enabled": true
+}
+```
+
+#### 動作
+
+- power1, power2, power3 のすべての条件を満たす場合に終了
+- power3 を省略した場合、power1 と power2 のみで判定
+- power3 は追加の条件として使用可能
+
+### 設定例
+
+#### 例1: オヤブン×かがやき (タイプ不問)
+
+```json
+{
+  "name": "オヤブン×かがやき",
+  "power1": {
+    "type": "shiny",
+    "attribute": null,
+    "min_level": 3
+  },
+  "power2": {
+    "type": "size",
+    "size": "oyabun",
+    "min_level": 3
+  },
+  "enabled": true
+}
+```
+
+#### 例2: かがやきパワー(Fire/Ground) × ちびちび (複数タイプ)
+
+```json
+{
+  "name": "かがやき(Fire/Ground) × ちびちび",
+  "power1": {
+    "type": "shiny",
+    "attribute": ["Fire", "Ground"],
+    "min_level": 3
+  },
+  "power2": {
+    "type": "size",
+    "size": "small",
+    "min_level": 3
+  },
+  "enabled": true
+}
+```
+
+#### 例3: どうぐパワー(きのみ) × どっさり (toolモード)
+
+```json
+{
+  "name": "どうぐパワー(きのみ) × どっさり",
+  "power1": {
+    "type": "tool",
+    "class": "kinomi",
+    "min_level": 3
+  },
+  "power2": {
+    "type": "dosari",
+    "min_level": 3
+  },
+  "enabled": true
+}
+```
+
+#### 例4: かがやき＋サイズ＋ほかく (3パワー)
+
+```json
+{
+  "name": "かがやき＋サイズ＋ほかく",
+  "power1": {
+    "type": "shiny",
+    "attribute": null,
+    "min_level": 3
+  },
+  "power2": {
+    "type": "size",
+    "size": "small",
+    "min_level": 3
+  },
+  "power3": {
+    "type": "capture",
+    "attribute": null,
+    "min_level": 1
+  },
+  "enabled": true
+}
+```
+
+### 注意点
+
+1. **エンコーディング**: ファイルは必ず UTF-8 で保存してください
+2. **JSON構文**: JSON構文が正しいことを確認してください（カンマ、括弧など）
+3. **タイプ名**: タイプ名は大文字小文字を区別し、正しい綴りで指定してください
+4. **レベル指定**: `min_level` は `1`, `2`, `3` のいずれかを指定してください
+5. **enabledフラグ**: テストする条件のみ `enabled: true` に設定してください
+6. **モード別条件**: shinyモードでは `shiny_conditions`、toolモードでは `tool_conditions` が使用されます
+

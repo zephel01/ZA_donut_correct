@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.0 (Custom Updated)
+ZA ドーナツ厳選 v1.9.1 (Custom Updated)
 ・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
 ・サイズ相互互換(CrossSize)機能
 ・Ball/Kinomi 相互互換(CrossMatch)機能
@@ -23,6 +23,9 @@ ZA ドーナツ厳選 v1.9.0 (Custom Updated)
 ・ユーザーが独自レシピを作成できる機能を追加 (Update v1.9.0)
 ・レシピの動的検出機能を実装 (Update v1.9.0)
 ・TARGETSフィールドを追加して、レシピが対象とするもの（色違い・どうぐパワー）を明確化 (Update v1.9.0)
+・カスタム条件ファイルによる特別終了機能を追加 (Update v1.9.1)
+・モード別条件対応（shinyモード：かがやき×サイズ、toolモード：どうぐ×どっさり）(Update v1.9.1)
+・複数タイプ指定に対応（配列形式 ["Fire", "Ground"]）(Update v1.9.1)
 """
 
 import os
@@ -40,7 +43,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.9.0'
+VERSION = '1.9.1'
 
 # 【1. レベル/レシピ指定】
 #   recipes/ ディレクトリ内の .py ファイルを自動検出します

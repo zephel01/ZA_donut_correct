@@ -1,6 +1,7 @@
 {
   "_comment": "カスタム条件設定ファイル",
   "_description": "各モードに応じた条件を設定します。enabled: true の条件が有効になります。",
+  "_note": "attributeを配列で指定すると複数タイプを指定できます: [\"Fire\", \"Ground\"]",
 
   "shiny_conditions": [
     {
@@ -49,6 +50,24 @@
         "min_level": 3
       },
       "enabled": true
+    }
+    ,
+    {
+      "name": "複数タイプ×かがやき（サンプル: Fire/Ground）",
+      "_description": "かがやきパワー(Fire/Ground Lv3以上) × ちびちびパワー(Lv3以上)",
+      "_note": "attributeを配列で指定すると複数タイプに対応",
+      "power1": {
+        "type": "shiny",
+        "attribute": ["Fire", "Ground"],
+        "_comment": "配列で指定: [\"Fire\", \"Ground\", \"Rock\", \"Steel\", \"Ice\"] 等",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "small",
+        "min_level": 3
+      },
+      "enabled": false
     }
   ],
 

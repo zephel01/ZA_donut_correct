@@ -697,8 +697,21 @@ class ZA_DonutV188(ImageProcPythonCommand):
             attribute = power_config.get('attribute')
             target_levels = get_target_levels(min_level)
 
-            if attribute:
-                # 特定タイプのチェック
+            # attributeが配列か文字列かで処理を分ける
+            if isinstance(attribute, list):
+                # 複数タイプ指定
+                attributes = attribute
+                attr_display = ", ".join(attributes)
+                for attr in attributes:
+                    key = f"target_icon_{attr}"
+                    lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels)
+                    if lvl is not None:
+                        info = f"かがやき({attr})"
+                        break
+                if lvl is None:
+                    info = f"かがやき({attr_display})"
+            elif attribute:
+                # 単一タイプ指定
                 key = f"target_icon_{attribute}"
                 lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels)
                 info = f"かがやき({attribute})"

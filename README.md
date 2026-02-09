@@ -166,6 +166,50 @@ SETTING_USE_CUSTOM_CONDITIONS = True
 }
 ```
 
+例2: かがやきパワー(Fire/Ground)Lv3 × オヤブンLv3 を狙う場合（複数タイプ指定）
+```json
+{
+  "shiny_conditions": [
+    {
+      "name": "かがやき(Fire/Ground)Lv3 × オヤブンLv3",
+      "power1": {
+        "type": "shiny",
+        "attribute": ["Fire", "Ground"],
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "oyabun",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ],
+  "tool_conditions": []
+}
+```
+```json
+{
+  "shiny_conditions": [
+    {
+      "name": "かがやき(Fire)Lv3 × オヤブンLv3",
+      "power1": {
+        "type": "shiny",
+        "attribute": "Fire",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "oyabun",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ],
+  "tool_conditions": []
+}
+```
+
 例2: すべてのかがやきパワーLv3 × すべてのサイズLv3 を狙う場合
 ```json
 {

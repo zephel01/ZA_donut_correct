@@ -1,7 +1,7 @@
 {
   "_comment": "カスタム条件設定ファイル",
   "_description": "各モードに応じた条件を設定します。enabled: true の条件が有効になります。",
-  "_note": "attributeを配列で指定すると複数タイプを指定できます: [\"Fire\", \"Ground\"]",
+  "_note": "テンプレート：かがやきパワー(shiny)、サイズ(size)、ほかくパワー(capture)、どうぐパワー(tool)、どっさりパワー(dosari) の5種類を前提としています。",
 
   "shiny_conditions": [
     {
@@ -50,12 +50,32 @@
         "min_level": 3
       },
       "enabled": true
-    }
-    ,
+    },
     {
-      "name": "複数タイプ×かがやき（サンプル: Fire/Ground）",
+      "name": "【サンプル】かがやき＋サイズ＋ほかく（3パワー）",
+      "_description": "かがやきパワー × サイズ × ほかくパワー（3つ同時に狙う）",
+      "_note": "3つのパワーを同時に狙うサンプル条件（デフォルトで無効）",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "small",
+        "min_level": 3
+      },
+      "power3": {
+        "type": "capture",
+        "attribute": null,
+        "min_level": 1
+      },
+      "enabled": false
+    },
+    {
+      "name": "【サンプル】かがやきパワー（複数タイプ）",
       "_description": "かがやきパワー(Fire/Ground Lv3以上) × ちびちびパワー(Lv3以上)",
-      "_note": "attributeを配列で指定すると複数タイプに対応",
+      "_note": "かがやきパワーのテンプレート使用例",
       "power1": {
         "type": "shiny",
         "attribute": ["Fire", "Ground"],
@@ -68,13 +88,47 @@
         "min_level": 3
       },
       "enabled": false
+    },
+    {
+      "name": "【サンプル】サイズ（オヤブン）",
+      "_description": "かがやきパワー(Lv3以上) × オヤブンパワー(Lv3以上)",
+      "_note": "サイズパワーのテンプレート使用例",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "oyabun",
+        "_comment": "size: 'oyabun'(オヤブン), 'big'(でかでか), 'small'(ちびちび)",
+        "min_level": 3
+      },
+      "enabled": false
+    },
+    {
+      "name": "【サンプル】ほかくパワー",
+      "_description": "かがやきパワー(Lv3以上) × ほかくパワー(Lv1以上)",
+      "_note": "ほかくパワーのテンプレート使用例",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "min_level": 3
+      },
+      "power2": {
+        "type": "capture",
+        "attribute": null,
+        "min_level": 1
+      },
+      "enabled": false
     }
   ],
 
   "tool_conditions": [
     {
-      "name": "どっさり×どうぐ(きのみ)",
+      "name": "【サンプル】どうぐパワー(きのみ) × どっさりパワー",
       "_description": "どうぐパワー(きのみ/Lv3以上) × どっさりパワー(Lv3以上)",
+      "_note": "どうぐパワー＆どっさりパワーのテンプレート使用例",
       "power1": {
         "type": "tool",
         "class": "kinomi",
@@ -86,11 +140,12 @@
         "_comment": "どっさりパワー",
         "min_level": 3
       },
-      "enabled": true
+      "enabled": false
     },
     {
-      "name": "どっさり×どうぐ(ボール)",
+      "name": "【サンプル】どうぐパワー(ボール) × どっさりパワー",
       "_description": "どうぐパワー(ボール/Lv3以上) × どっさりパワー(Lv3以上)",
+      "_note": "どうぐパワー＆どっさりパワーのテンプレート使用例",
       "power1": {
         "type": "tool",
         "class": "ball",
@@ -100,7 +155,7 @@
         "type": "dosari",
         "min_level": 3
       },
-      "enabled": true
+      "enabled": false
     }
   ]
 }

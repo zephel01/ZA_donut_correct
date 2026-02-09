@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.3 (Custom Updated)
-・Switch1(低速/旧型)/Switch2(高速/有機EL)のタイミング切り替え機能
-・サイズ相互互換(CrossSize)機能
-・Ball/Kinomi 相互互換(CrossMatch)機能
-・「オヤブンLv3」かつ「かがやき(Type不問)Lv3」停止オプション
-・画像認識スコアのログ出力機能
-・デバッグログによる進行状況の可視化
-・固定待機を廃止し、画像認識(result_text.png)による動的待機を実装
-・レインボードーナツ（どうぐパワー節約）レシピを追加 (rainbow1/2/3)
-・どうぐパワー単独終了オプションを追加 (どっさり不問)
-・複数タイプの指定に対応 (例: 'Ghost, Dark')
-・ログ表示を整形（複数タイプ指定時の結果をスマートに表示）
-・ほかくパワー検知の実装、shiny3レシピ追加
-・移動処理の変更(New)
-・shiny4レシピを追加 (Update)
-・recipe3レシピを追加 (Update)
-・デバック機能の修正
-・エリア判定の追加(New))
+ZA ドーナツ厳選 v1.9.5 (Custom Updated)
 ・レシピを外部ファイル化（recipes/ディレクトリ内の.pyファイルから読み込み）(Update v1.9.0)
 ・ユーザーが独自レシピを作成できる機能を追加 (Update v1.9.0)
 ・レシピの動的検出機能を実装 (Update v1.9.0)
@@ -29,6 +12,8 @@ ZA ドーナツ厳選 v1.9.3 (Custom Updated)
 ・カスタム条件のバグ修正（attribute: null時にType_Allを優先チェック）(Update v1.9.2)
 ・複数の「かがやきパワー」がある場合、全てのマッチング位置をチェックするように修正 (Update v1.9.2)
 ・目標達成後ループ機能を追加 (Update v1.9.3)
+・重複機能の削除 (Update v1.9.4)
+・テンプレートの追加(donut_conditions.json) (Update v1.9.5)
 """
 
 import os
@@ -46,7 +31,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.9.3'
+VERSION = '1.9.5'
 
 # 【1. レベル/レシピ指定】
 #   recipes/ ディレクトリ内の .py ファイルを自動検出します
@@ -106,31 +91,7 @@ SETTING_ENABLE_LOOP_AFTER_SUCCESS = False
 # 目標達成後の最大ループ回数
 SETTING_LOOP_AFTER_SUCCESS_MAX = 1
 
-# 【7. クロス判定設定 (互換/妥協機能)】
-# -----------------------------------------------------------------------------
-# (A) Ball <-> Kinomi 相互互換 (recipeモード用)
-# どっさりLv2以上指定時に、サブパワーがLv3なら相互互換で妥協採用する機能
-SETTING_CROSS_MATCH = True
-
-# (B) サイズ相互互換 (shinyモード用)
-# 指定のタイプ(かがやきLv3)が出た時、サイズが違っても以下の設定がTrueなら採用(Lv3限定)
-# True/False
-SETTING_CROSS_SIZE_OYABUN = False  # オヤブンを許容するか
-SETTING_CROSS_SIZE_BIG    = False   # でかでか(Big)を許容するか
-SETTING_CROSS_SIZE_SMALL  = True  # ちびちび(Small)を許容するか
-
-# (C) タイプ不問オヤブン終了オプション
-# ターゲットのタイプと違っても、「オヤブンLv3」かつ「かがやき(タイプ不問)Lv3」なら終了する
-# True/False
-SETTING_STOP_ON_ANY_TYPE_OYABUN = False
-
-# (D) どうぐパワー単独終了オプション (どっさり不問)
-# 指定したどうぐパワー(きのみ等)が条件(Lv3/Lv2)を満たせば、どっさりパワーの結果に関わらず終了する
-# recipe/rainbowモードでのみ有効
-# True/False
-SETTING_STOP_ON_TOOL_ONLY = False
-
-# (E) 外部条件ファイルによる特別停止オプション
+# 【7. 外部条件ファイルによる特別停止オプション】
 # donut_conditions.json に定義された条件に一致する場合に終了する
 # True/False
 SETTING_USE_CUSTOM_CONDITIONS = False
@@ -203,14 +164,6 @@ DEBUG_LOG   = True if DEBUG_LOG_STR == 'true' else False
 # 目標達成後ループ設定の読み込み
 ENABLE_LOOP_AFTER_SUCCESS = True if os.environ.get('ENABLE_LOOP_AFTER_SUCCESS', str(SETTING_ENABLE_LOOP_AFTER_SUCCESS)).lower() == 'true' else False
 LOOP_AFTER_SUCCESS_MAX = int(os.environ.get('LOOP_AFTER_SUCCESS_MAX', str(SETTING_LOOP_AFTER_SUCCESS_MAX)))
-
-# --- クロス機能の設定読み込み ---
-ENABLE_CROSS_MATCH = True if os.environ.get('ENABLE_CROSS_MATCH', str(SETTING_CROSS_MATCH)).lower() == 'true' else False
-ENABLE_CROSS_OYABUN = True if os.environ.get('ENABLE_CROSS_SIZE_OYABUN', str(SETTING_CROSS_SIZE_OYABUN)).lower() == 'true' else False
-ENABLE_CROSS_BIG = True if os.environ.get('ENABLE_CROSS_SIZE_BIG', str(SETTING_CROSS_SIZE_BIG)).lower() == 'true' else False
-ENABLE_CROSS_SMALL = True if os.environ.get('ENABLE_CROSS_SIZE_SMALL', str(SETTING_CROSS_SIZE_SMALL)).lower() == 'true' else False
-ENABLE_ANY_TYPE_OYABUN = True if os.environ.get('ENABLE_ANY_TYPE_OYABUN', str(SETTING_STOP_ON_ANY_TYPE_OYABUN)).lower() == 'true' else False
-ENABLE_TOOL_ONLY_STOP = True if os.environ.get('ENABLE_TOOL_ONLY', str(SETTING_STOP_ON_TOOL_ONLY)).lower() == 'true' else False
 
 # --- ほかくパワー設定読み込み ---
 ENABLE_CAPTURE_POWER = True if os.environ.get('ENABLE_CAPTURE_POWER', str(SETTING_ENABLE_CAPTURE_POWER)).lower() == 'true' else False
@@ -428,7 +381,6 @@ class ZA_DonutV188(ImageProcPythonCommand):
         super().__init__(cam)
         self.count = 0
         self.templates = {}
-        self.cross_icon_key = None
         self._load_templates()
         self.success_count = 0  # 目標達成回数
 
@@ -503,34 +455,40 @@ class ZA_DonutV188(ImageProcPythonCommand):
         if ENABLE_CUSTOM_CONDITIONS and CUSTOM_CONDITIONS:
             for condition in CUSTOM_CONDITIONS:
                 # かがやきパワーの追加タイプチェック
-                for power_key in ['power1', 'power2']:
-                    power = condition[power_key]
-                    if power['type'] == 'shiny':
-                        attribute = power.get('attribute')
-                        if attribute:
-                            key = f"target_icon_{attribute}"
+                for power_key in ['power1', 'power2', 'power3']:
+                    if power_key in condition:
+                        power = condition[power_key]
+                        if power['type'] == 'shiny':
+                            attribute = power.get('attribute')
+                            if attribute:
+                                key = f"target_icon_{attribute}"
+                                if key not in files:
+                                    files[key] = f"Type_{attribute}.png"
+
+                        # どうぐパワーの追加クラスチェック（toolモードのみ）
+                        elif power['type'] == 'tool':
+                            item_class = power['class']
+                            key = f"target_icon_{item_class}"
                             if key not in files:
-                                files[key] = f"Type_{attribute}.png"
+                                files[key] = f"class_{item_class}.png"
 
-                    # どうぐパワーの追加クラスチェック（toolモードのみ）
-                    elif power['type'] == 'tool':
-                        item_class = power['class']
-                        key = f"target_icon_{item_class}"
-                        if key not in files:
-                            files[key] = f"class_{item_class}.png"
-
+                        # ほかくパワーのテンプレート追加（captureタイプ使用時）
+                        elif power['type'] == 'capture':
+                            if 'capture_label' not in files:
+                                files['capture_label'] = 'capture_label.png'
+                            if 'type_all2' not in files:
+                                files['type_all2'] = 'Type_All2.png'  # 「すべて」のアイコン
+ 
         print(f"[System] Version: {VERSION}")
         print(f"[System] Recipe: {ENV_RECIPE}")
         print(f"[System] Timing Mode: {TIMING_MODE}")
 
         if 'shiny' in CURRENT_RECIPE['targets']:
             print(f"[System] Target: {ENV_RECIPE} + Type=[{TARGET_TYPE_Display}] + {SIZE}")
-            print(f"[System] AnyTypeOyabunStop: {ENABLE_ANY_TYPE_OYABUN}")
             if ENABLE_CAPTURE_POWER:
                 print(f"[System] CapturePower: Enabled (Lv={CAPTURE_LEVEL_REQ}, Compromise={ENABLE_CAPTURE_COMPROMISE})")
         else:
             print(f"[System] Target: Tool({INPUT_ITEM_CLASS}) + Dosari")
-            print(f"[System] ToolOnlyStop: {ENABLE_TOOL_ONLY_STOP}")
 
         if ENABLE_CUSTOM_CONDITIONS:
             print(f"[System] CustomConditions: Enabled ({len(CUSTOM_CONDITIONS)} conditions)")
@@ -541,22 +499,9 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 self.templates[key] = cv2.imread(path, 0)
             else:
                 self.templates[key] = None
-        
+
         if self.templates.get('result_text') is None:
             print("[Warning] 'result_text.png' not found. Fallback to fixed timing.")
-
-        if ENABLE_CROSS_MATCH and 'shiny' not in CURRENT_RECIPE['targets']:
-            c_fname = None
-            if INPUT_ITEM_CLASS == 'ball':
-                c_fname = 'class_kinomi.png'
-                self.cross_icon_key = 'cross_kinomi'
-            elif INPUT_ITEM_CLASS == 'kinomi':
-                c_fname = 'class_ball.png'
-                self.cross_icon_key = 'cross_ball'
-            if c_fname:
-                path = os.path.join(self.FOLDER, c_fname)
-                if os.path.exists(path):
-                    self.templates[self.cross_icon_key] = cv2.imread(path, 0)
 
     def save_capture(self, prefix="check"):
         filename = f"{CAPTURE_DIR}/{prefix}_{self.count:05d}_{int(time.time())}.png"
@@ -739,8 +684,20 @@ class ZA_DonutV188(ImageProcPythonCommand):
         p2_result = self._check_single_power(gray_screen, p2)
         self.debug_log(f"[CustomCondition] Power2: {p2_result['info']}[{p2_result['level']}] (success={p2_result['success']}, score={p2_result['score']:.2f})")
 
-        # 両方のパワーが条件を満たしているかチェック
-        success = p1_result['success'] and p2_result['success']
+        # Power3 のチェック（存在する場合）
+        p3_result = None
+        if 'power3' in condition:
+            p3 = condition['power3']
+            p3_result = self._check_single_power(gray_screen, p3)
+            self.debug_log(f"[CustomCondition] Power3: {p3_result['info']}[{p3_result['level']}] (success={p3_result['success']}, score={p3_result['score']:.2f})")
+
+        # すべてのパワーが条件を満たしているかチェック
+        if p3_result is not None:
+            success = p1_result['success'] and p2_result['success'] and p3_result['success']
+            debug_result = f"{success} (p1_success={p1_result['success']}, p2_success={p2_result['success']}, p3_success={p3_result['success']})"
+        else:
+            success = p1_result['success'] and p2_result['success']
+            debug_result = f"{success} (p1_success={p1_result['success']}, p2_success={p2_result['success']})"
 
         detected_info = {
             'condition_name': condition['name'],
@@ -754,7 +711,14 @@ class ZA_DonutV188(ImageProcPythonCommand):
             }
         }
 
-        self.debug_log(f"[CustomCondition] Result: {success} (p1_success={p1_result['success']}, p2_success={p2_result['success']})")
+        # Power3 が存在する場合は追加
+        if p3_result is not None:
+            detected_info['power3'] = {
+                'type': condition['power3']['type'],
+                'detected': p3_result
+            }
+
+        self.debug_log(f"[CustomCondition] Result: {debug_result}")
 
         return success, detected_info
 
@@ -806,7 +770,13 @@ class ZA_DonutV188(ImageProcPythonCommand):
                     info = "かがやき(All)"
                     self.debug_log(f"[CustomCondition] Found Type_All: {lvl} (score={score:.2f})")
                 else:
-                    # Type_Allが見つからなければターゲットタイプを順にチェック
+                    # Type_Allが見つからなければ全タイプを順にチェック（TARGET_TYPES以外も含む）
+                    # 全タイプのリストを定義
+                    ALL_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting',
+                                'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost',
+                                'Dragon', 'Dark', 'Steel', 'Fairy']
+
+                    # まずTARGET_TYPESをチェック（優先順位あり）
                     for t_name in TARGET_TYPES:
                         key = f"target_icon_{t_name}"
                         lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels, check_all_matches=True)
@@ -814,6 +784,18 @@ class ZA_DonutV188(ImageProcPythonCommand):
                             info = f"かがやき({t_name})"
                             self.debug_log(f"[CustomCondition] Found Type_{t_name}: {lvl} (score={score:.2f})")
                             break
+
+                    # TARGET_TYPESで見つからなければ全タイプをチェック
+                    if lvl is None:
+                        for t_name in ALL_TYPES:
+                            key = f"target_icon_{t_name}"
+                            # テンプレートが存在する場合のみチェック
+                            if key in self.templates:
+                                lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels, check_all_matches=True)
+                                if lvl is not None:
+                                    info = f"かがやき({t_name})"
+                                    self.debug_log(f"[CustomCondition] Found Type_{t_name}: {lvl} (score={score:.2f})")
+                                    break
                     if lvl is None:
                         info = "かがやき(N/A)"
                         self.debug_log(f"[CustomCondition] No matching shiny power found")
@@ -875,6 +857,52 @@ class ZA_DonutV188(ImageProcPythonCommand):
             lvl, score = self.detect_power_level(gray_screen, 'dosari_label', target_levels)
             info = "どっさり"
 
+        elif power_type == 'capture':
+            # ほかくパワーチェック
+            attribute = power_config.get('attribute')
+            target_levels = get_target_levels(min_level)
+
+            # Type_All2を優先的にチェック
+            lvl, score = self.detect_power_icon_level(gray_screen, 'capture_label', 'type_all2', target_levels)
+            if lvl is not None:
+                info = "ほかく(すべて)"
+                self.debug_log(f"[CustomCondition] Found Type_All2: {lvl} (score={score:.2f})")
+            else:
+                # Type_All2が見つからなければタイプをチェック
+                if isinstance(attribute, list):
+                    # 複数タイプ指定
+                    attributes = attribute
+                    attr_display = ", ".join(attributes)
+                    for attr in attributes:
+                        key = f"target_icon_{attr}"
+                        if key in self.templates:
+                            lvl, score = self.detect_power_icon_level(gray_screen, 'capture_label', key, target_levels)
+                            if lvl is not None:
+                                info = f"ほかく({attr})"
+                                self.debug_log(f"[CustomCondition] Found Type_{attr}: {lvl} (score={score:.2f})")
+                                break
+                    if lvl is None:
+                        info = f"ほかく({attr_display})"
+                elif attribute:
+                    # 単一タイプ指定
+                    key = f"target_icon_{attribute}"
+                    lvl, score = self.detect_power_icon_level(gray_screen, 'capture_label', key, target_levels)
+                    info = f"ほかく({attribute})"
+                else:
+                    # 全タイプチェック（タイプ不問）
+                    self.debug_log(f"[CustomCondition] Checking all capture types (target levels: {target_levels})")
+                    for t_name in TARGET_TYPES:
+                        key = f"target_icon_{t_name}"
+                        if key in self.templates:
+                            lvl, score = self.detect_power_icon_level(gray_screen, 'capture_label', key, target_levels)
+                            if lvl is not None:
+                                info = f"ほかく({t_name})"
+                                self.debug_log(f"[CustomCondition] Found Type_{t_name}: {lvl} (score={score:.2f})")
+                                break
+                    if lvl is None:
+                        info = "ほかく(N/A)"
+                        self.debug_log(f"[CustomCondition] No matching capture power found")
+
         else:
             # 不明なタイプ
             return {'success': False, 'level': None, 'score': 0.0, 'info': f"Unknown({power_type})"}
@@ -916,6 +944,10 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 self.log(f"★★★ カスタム条件ヒット({mode}): {detected_info['condition_name']} ★★★")
                 self.log(f"  Power1: {p1_info['detected']['info']}[{p1_info['detected']['level']}]({p1_info['detected']['score']:.2f})")
                 self.log(f"  Power2: {p2_info['detected']['info']}[{p2_info['detected']['level']}]({p2_info['detected']['score']:.2f})")
+                # Power3 が存在する場合はログ出力
+                if 'power3' in detected_info:
+                    p3_info = detected_info['power3']
+                    self.log(f"  Power3: {p3_info['detected']['info']}[{p3_info['detected']['level']}]({p3_info['detected']['score']:.2f})")
                 return True, detected_info
 
         return False, None
@@ -1151,56 +1183,6 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 gray, 'tool_label', 'target_icon', TARGETS_EXTRA
             )
 
-        if ENABLE_CROSS_MATCH and ('shiny' not in CURRENT_RECIPE['targets']) and \
-           (res1_lvl is not None) and (res2_lvl is None) and (self.cross_icon_key is not None):
-            cross_targets = ['lv3']
-            l2_cross_n = f"Cross({self.cross_icon_key})"
-            self.debug_log(f"Checking ItemCross: {l2_cross_n}...")
-            c_lvl, c_score = self.detect_power_icon_level(
-                gray, 'tool_label', self.cross_icon_key, cross_targets
-            )
-            if c_lvl is not None:
-                self.log(f"★ ItemCross成功: {l2_cross_n} {c_lvl} ({c_score:.2f})")
-                res2_lvl = c_lvl
-                s2 = c_score
-                l2_n += f" -> {l2_cross_n}"
-
-        if 'shiny' in CURRENT_RECIPE['targets'] and (res2_lvl is not None) and (res1_lvl is None):
-            cross_size_candidates = []
-            if ENABLE_CROSS_OYABUN: cross_size_candidates.append(('lbl_oyabun', 'Oyabun'))
-            if ENABLE_CROSS_BIG:    cross_size_candidates.append(('lbl_big',    'Big'))
-            if ENABLE_CROSS_SMALL:  cross_size_candidates.append(('lbl_small',  'Small'))
-            
-            if cross_size_candidates:
-                self.debug_log(f"Checking SizeCross candidates...")
-                cross_targets = ['lv3']
-                for lbl_key, lbl_name in cross_size_candidates:
-                    cs_lvl, cs_score = self.detect_power_level(gray, lbl_key, cross_targets)
-                    if cs_lvl is not None:
-                        self.log(f"★ SizeCross成功: {lbl_name} {cs_lvl} ({cs_score:.2f})")
-                        res1_lvl = cs_lvl
-                        s1 = cs_score
-                        l1_n += f" -> Cross({lbl_name})"
-                        break
-
-        any_type_success = False
-        if ENABLE_ANY_TYPE_OYABUN and 'shiny' in ENV_RECIPE:
-            if (res1_lvl is None or res2_lvl is None):
-                self.debug_log("Checking AnyType + Oyabun Lv3 condition...")
-                oya_lvl, oya_score = self.detect_power_level(gray, 'lbl_oyabun', ['lv3'])
-                if oya_lvl == 'lv3':
-                    sparkle_any_lvl, spa_score = self.detect_power_level(
-                        gray, 'shiny_label', ['lv3'], roi_width_override=280
-                    )
-                    if sparkle_any_lvl == 'lv3':
-                        self.log(f"★ 特別終了条件: オヤブンLv3({oya_score:.2f}) & かがやき(Type不問)Lv3({spa_score:.2f}) を検知しました")
-                        any_type_success = True
-                        res1_lvl = 'lv3'
-                        res2_lvl = 'lv3'
-                        s1, s2 = oya_score, spa_score
-                        l1_n = "オヤブン"
-                        l2_n = "かがやき(Any)"
-
         # === ほかくパワー検知（shinyモードかつ有効時のみ）===
         res3_lvl = None
         s3 = 0.0
@@ -1216,15 +1198,32 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
             # 「すべて」でなければ個別タイプをチェック
             if res3_lvl is None:
-                for t_name in TARGET_TYPES:
-                    key = f"target_icon_{t_name}"
-                    lvl, score = self.detect_power_icon_level(gray, 'capture_label', key, TARGETS_CAPTURE)
-                    if lvl is not None:
-                        res3_lvl = lvl
-                        s3 = score
-                        capture_matched_type = t_name
-                        l3_n = f"ほかく({t_name})"
-                        break
+                # かがやきが "All" の場合は全タイプをチェック
+                if matched_type_name == "All":
+                    ALL_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting',
+                                'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost',
+                                'Dragon', 'Dark', 'Steel', 'Fairy']
+                    for t_name in ALL_TYPES:
+                        key = f"target_icon_{t_name}"
+                        if key in self.templates:
+                            lvl, score = self.detect_power_icon_level(gray, 'capture_label', key, TARGETS_CAPTURE)
+                            if lvl is not None:
+                                res3_lvl = lvl
+                                s3 = score
+                                capture_matched_type = t_name
+                                l3_n = f"ほかく({t_name})"
+                                break
+                else:
+                    # かがやきが特定タイプの場合はターゲットタイプのみをチェック
+                    for t_name in TARGET_TYPES:
+                        key = f"target_icon_{t_name}"
+                        lvl, score = self.detect_power_icon_level(gray, 'capture_label', key, TARGETS_CAPTURE)
+                        if lvl is not None:
+                            res3_lvl = lvl
+                            s3 = score
+                            capture_matched_type = t_name
+                            l3_n = f"ほかく({t_name})"
+                            break
 
             str3 = res3_lvl if res3_lvl else "なし"
             self.log(f"判定: {l3_n}[{str3}]({s3:.2f})")
@@ -1244,16 +1243,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
         self.log(f"判定: {l1_n}[{str1}]({s1:.2f}) / {l2_n}[{str2}]({s2:.2f})")
 
-        # 特別終了条件(1): 非shinyモードでのどうぐパワー単独終了
-        if ('shiny' not in CURRENT_RECIPE['targets']) and ENABLE_TOOL_ONLY_STOP and (res2_lvl is not None):
-            self.log(f"★ 特別終了条件: どうぐパワー単独条件クリア ({l2_n}: {res2_lvl})")
-            return True
-        
-        # 特別終了条件(2): Jackpot (AnyTypeOyabun)
-        if any_type_success:
-            return True
-
-        # 特別終了条件(3): カスタム条件一致
+        # 特別終了条件(1): カスタム条件一致
         if ENABLE_CUSTOM_CONDITIONS:
             custom_success, custom_info = self.check_all_custom_conditions(gray)
             if custom_success:

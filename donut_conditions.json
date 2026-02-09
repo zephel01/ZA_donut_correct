@@ -1,0 +1,87 @@
+{
+  "_comment": "カスタム条件設定ファイル",
+  "_description": "各モードに応じた条件を設定します。enabled: true の条件が有効になります。",
+
+  "shiny_conditions": [
+    {
+      "name": "オヤブン×かがやき",
+      "_description": "かがやきパワー(Lv3以上) × オヤブンパワー(Lv3以上)",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "_comment": "attribute: nullでタイプ不問、特定のタイプを指定する場合は 'Fire', 'Water' 等",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "oyabun",
+        "_comment": "size: 'oyabun'(オヤブン), 'big'(でかでか), 'small'(ちびちび)",
+        "min_level": 3
+      },
+      "enabled": true
+    },
+    {
+      "name": "でかでか×かがやき",
+      "_description": "かがやきパワー(Lv3以上) × でかでかパワー(Lv3以上)",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "big",
+        "min_level": 3
+      },
+      "enabled": true
+    },
+    {
+      "name": "ちびちび×かがやき",
+      "_description": "かがやきパワー(Lv3以上) × ちびちびパワー(Lv3以上)",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "small",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ],
+
+  "tool_conditions": [
+    {
+      "name": "どっさり×どうぐ(きのみ)",
+      "_description": "どうぐパワー(きのみ/Lv3以上) × どっさりパワー(Lv3以上)",
+      "power1": {
+        "type": "tool",
+        "class": "kinomi",
+        "_comment": "class: 'kinomi'(きのみ), 'ball'(ボール), 'coin'(コイン), 'treasure'(宝物), 'special'(特別), 'candy'(アメ)",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "dosari",
+        "_comment": "どっさりパワー",
+        "min_level": 3
+      },
+      "enabled": true
+    },
+    {
+      "name": "どっさり×どうぐ(ボール)",
+      "_description": "どうぐパワー(ボール/Lv3以上) × どっさりパワー(Lv3以上)",
+      "power1": {
+        "type": "tool",
+        "class": "ball",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "dosari",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ]
+}

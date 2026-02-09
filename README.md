@@ -27,6 +27,7 @@ Poke-Controller-Modified-Extension/
                 │   ├── rainbow3.py
                 │   └── template.py
                 ├── ZA_donut_correct.py  # 本体プログラム
+                ├── donut_conditions.json # カスタム条件ファイル
                 ├── USER_RECIPE_GUIDE.md  # 独自レシピ作成ガイド
                 └── README.md            # このファイル
 ```
@@ -76,7 +77,138 @@ Poke-Controller-Modified-Extension\
 - **ほかくパワー検知**: shinyモードにおいて「ほかくパワー」のレベルやタイプを判定し、条件に合致する場合のみ採用します。
 - **Jackpot判定**: 特定のタイプを狙っている際でも「オヤブンLv3 + かがやきLv3」が出た場合に特別に終了するオプション。
 
-### 4. 知能的なエラーリカバリ
+### 4. カスタム条件機能
+外部ファイル（`donut_conditions.json`）から任意の条件を定義し、その条件に一致するドーナツが出現した場合に自動的に終了する機能です。
+
+**モード別の条件:**
+- **shinyモード時**:
+  - かがやきパワー × サイズパワーの組み合わせを狙う
+  - オヤブンLv3 × かがやき(特定タイプ)Lv3
+  - でかでかLv3 × かがやき(特定タイプ)Lv3
+  - ちびちびLv3 × かがやき(特定タイプ)Lv3
+
+- **toolモード時**:
+  - どうぐパワー × どっさりパワーの組み合わせを狙う
+  - どっさりLv3 × どうぐ(きのみ/ボール)Lv3
+
+**条件の定義方法:**
+`donut_conditions.json` ファイルを編集することで、モードごとに条件を定義できます。
+
+```json
+{
+  "shiny_conditions": [
+    {
+      "name": "オヤブン×かがやき",
+      "power1": {
+        "type": "shiny",
+        "attribute": null,
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "oyabun",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ],
+  "tool_conditions": [
+    {
+      "name": "どっさり×どうぐ(きのみ)",
+      "power1": {
+        "type": "tool",
+        "class": "kinomi",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "dosari",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ]
+}
+```
+
+**有効化方法:**
+```python
+SETTING_USE_CUSTOM_CONDITIONS = True
+```
+
+**サポートするパワータイプ:**
+- `shiny`: かがやきパワー（`attribute` でタイプを指定、`null` でタイプ不問）
+- `size`: サイズパワー（`size` で `oyabun`/`big`/`small` を指定）
+- `tool`: どうぐパワー（`class` で `kinomi`/`ball`/`coin`/`treasure`/`special`/`candy` を指定）
+- `dosari`: どっさりパワー
+
+**設定例:**
+
+例1: かがやきパワー(Fire)Lv3 × オヤブンLv3 を狙う場合
+```json
+{
+  "shiny_conditions": [
+    {
+      "name": "かがやき(Fire)Lv3 × オヤブンLv3",
+      "power1": {
+        "type": "shiny",
+        "attribute": "Fire",
+        "min_level": 3
+      },
+      "power2": {
+        "type": "size",
+        "size": "oyabun",
+        "min_level": 3
+      },
+      "enabled": true
+    }
+  ],
+  "tool_conditions": []
+}
+```
+
+例2: すべてのかがやきパワーLv3 × すべてのサイズLv3 を狙う場合
+```json
+{
+  "shiny_conditions": [
+    {
+      "name": "オヤブン×かがやき",
+      "power1": { "type": "shiny", "attribute": null, "min_level": 3 },
+      "power2": { "type": "size", "size": "oyabun", "min_level": 3 },
+      "enabled": true
+    },
+    {
+      "name": "でかでか×かがやき",
+      "power1": { "type": "shiny", "attribute": null, "min_level": 3 },
+      "power2": { "type": "size", "size": "big", "min_level": 3 },
+      "enabled": true
+    },
+    {
+      "name": "ちびちび×かがやき",
+      "power1": { "type": "shiny", "attribute": null, "min_level": 3 },
+      "power2": { "type": "size", "size": "small", "min_level": 3 },
+      "enabled": true
+    }
+  ],
+  "tool_conditions": []
+}
+```
+
+例3: どっさりLv3 × どうぐ(きのみ)Lv3 を狙う場合
+```json
+{
+  "shiny_conditions": [],
+  "tool_conditions": [
+    {
+      "name": "どっさり×どうぐ(きのみ)",
+      "power1": { "type": "tool", "class": "kinomi", "min_level": 3 },
+      "power2": { "type": "dosari", "min_level": 3 },
+      "enabled": true
+    }
+  ]
+}
+```
+
+### 5. 知能的なエラーリカバリ
 - **自動エリア判定 & 移動**: マクロ開始時にピクニックメニューからエリアを判定し、メディオプラザ外であれば自動的に正しい場所へ移動して再開します。
 - **動的待機**: 固定秒数の待機ではなく、画面の画像認識によって結果画面を検知し、最適なタイミングで次の操作に移ります。
 - **リトライ機能**: 作成に失敗（焦げた等）した場合、自動的にレシピ入力からやり直します。
@@ -110,6 +242,8 @@ Poke-Controller-Modified-Extension\
 - `SETTING_TIMING_MODE`: 本体のモデルに合わせて `switch1` または `switch2` を指定
     - switch2: 高速読み込み（有機EL等）
     - switch1: 低速読み込み（旧型・Lite等）
+- `SETTING_USE_CUSTOM_CONDITIONS`: カスタム条件機能を有効にするか（`True`/`False`）
+- `SETTING_CONDITIONS_FILE`: 条件ファイルのパス（デフォルト: `donut_conditions.json`）
 
 ### 独自レシピの作成方法
 

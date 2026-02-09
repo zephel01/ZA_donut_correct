@@ -27,6 +27,7 @@ ZA ドーナツ厳選 v1.9.0 (Custom Updated)
 
 import os
 import importlib.util
+import json
 import cv2
 import numpy as np
 import time
@@ -116,6 +117,14 @@ SETTING_STOP_ON_ANY_TYPE_OYABUN = False
 # True/False
 SETTING_STOP_ON_TOOL_ONLY = False
 
+# (E) 外部条件ファイルによる特別停止オプション
+# donut_conditions.json に定義された条件に一致する場合に終了する
+# True/False
+SETTING_USE_CUSTOM_CONDITIONS = False
+
+# 外部条件ファイルのパス (デフォルト: donut_conditions.json)
+SETTING_CONDITIONS_FILE = 'donut_conditions.json'
+
 # 【8. 動作タイミング設定 (switch1/switch2)】
 # switch1: 旧型/Liteなど読み込みが遅い場合 (待機長め・ボタン連打多め)
 # switch2: 有機ELなど読み込みが速い場合 (待機短め・最適化)
@@ -196,6 +205,10 @@ except:
 
 ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', str(SETTING_CAPTURE_COMPROMISE)).lower() == 'true' else False
 
+# --- 外部条件ファイル設定読み込み ---
+ENABLE_CUSTOM_CONDITIONS = True if os.environ.get('USE_CUSTOM_CONDITIONS', str(SETTING_USE_CUSTOM_CONDITIONS)).lower() == 'true' else False
+CONDITIONS_FILE = os.environ.get('CONDITIONS_FILE', SETTING_CONDITIONS_FILE)
+
 
 # =============================================================================
 # 動的レシピ検出機能
@@ -205,6 +218,7 @@ ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', 
 # スクリプトファイルの場所を取得（絶対パス）
 SCRIPT_DIR_ABS = os.path.dirname(os.path.abspath(__file__))
 RECIPE_DIR_ABS = os.path.join(SCRIPT_DIR_ABS, 'recipes')
+CONDITIONS_FILE_ABS = os.path.join(SCRIPT_DIR_ABS, CONDITIONS_FILE)
 
 
 def get_valid_recipes():
@@ -262,6 +276,50 @@ def load_recipe(recipe_name):
         'targets': getattr(recipe_module, 'TARGETS', []),
         'steps': getattr(recipe_module, 'STEPS', [])
     }
+
+
+def load_custom_conditions():
+    """
+    外部条件ファイルからカスタム条件を読み込む関数
+
+    Returns:
+        dict: モードごとの条件リスト
+
+    Raises:
+        FileNotFoundError: 条件ファイルが見つからない場合
+        json.JSONDecodeError: JSON形式が不正な場合
+    """
+    if not os.path.exists(CONDITIONS_FILE_ABS):
+        print(f"[Warning] 条件ファイルが見つかりません: {CONDITIONS_FILE_ABS}")
+        return {'shiny_conditions': [], 'tool_conditions': []}
+
+    with open(CONDITIONS_FILE_ABS, 'r', encoding='utf-8') as f:
+        conditions_dict = json.load(f)
+
+    # 各モードの条件をフィルタリング
+    result = {
+        'shiny_conditions': [],
+        'tool_conditions': []
+    }
+
+    for mode_key in ['shiny_conditions', 'tool_conditions']:
+        if mode_key in conditions_dict:
+            enabled = [c for c in conditions_dict[mode_key] if c.get('enabled', True)]
+            result[mode_key] = enabled
+            print(f"[System] {mode_key}: {len(enabled)} conditions loaded from {CONDITIONS_FILE}")
+
+    return result
+
+
+# カスタム条件を読み込み
+CUSTOM_CONDITIONS_DICT = load_custom_conditions() if ENABLE_CUSTOM_CONDITIONS else {'shiny_conditions': [], 'tool_conditions': []}
+
+# 現在のモードに応じた条件を取得
+if 'shiny' in CURRENT_RECIPE['targets']:
+    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('shiny_conditions', [])
+else:
+    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('tool_conditions', [])
+
 
 
 
@@ -351,7 +409,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         super().__init__(cam)
         self.count = 0
         self.templates = {}
-        self.cross_icon_key = None 
+        self.cross_icon_key = None
         self._load_templates()
 
     def log(self, msg):
@@ -421,6 +479,26 @@ class ZA_DonutV188(ImageProcPythonCommand):
             files['tool_label'] = 'tool_label.png'
             files['target_icon'] = f"class_{INPUT_ITEM_CLASS}.png"
 
+        # カスタム条件で必要な追加のテンプレートを読み込み
+        if ENABLE_CUSTOM_CONDITIONS and CUSTOM_CONDITIONS:
+            for condition in CUSTOM_CONDITIONS:
+                # かがやきパワーの追加タイプチェック
+                for power_key in ['power1', 'power2']:
+                    power = condition[power_key]
+                    if power['type'] == 'shiny':
+                        attribute = power.get('attribute')
+                        if attribute:
+                            key = f"target_icon_{attribute}"
+                            if key not in files:
+                                files[key] = f"Type_{attribute}.png"
+
+                    # どうぐパワーの追加クラスチェック（toolモードのみ）
+                    elif power['type'] == 'tool':
+                        item_class = power['class']
+                        key = f"target_icon_{item_class}"
+                        if key not in files:
+                            files[key] = f"class_{item_class}.png"
+
         print(f"[System] Version: {VERSION}")
         print(f"[System] Recipe: {ENV_RECIPE}")
         print(f"[System] Timing Mode: {TIMING_MODE}")
@@ -433,6 +511,9 @@ class ZA_DonutV188(ImageProcPythonCommand):
         else:
             print(f"[System] Target: Tool({INPUT_ITEM_CLASS}) + Dosari")
             print(f"[System] ToolOnlyStop: {ENABLE_TOOL_ONLY_STOP}")
+
+        if ENABLE_CUSTOM_CONDITIONS:
+            print(f"[System] CustomConditions: Enabled ({len(CUSTOM_CONDITIONS)} conditions)")
             
         for key, filename in files.items():
             path = os.path.join(self.FOLDER, filename)
@@ -560,6 +641,187 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 best_lvl_score = l_score
                 if l_score > self.THRESHOLD_LEVEL: best_lvl = lvl_key
         return best_lvl, best_lvl_score
+
+    def check_custom_condition(self, gray_screen, condition):
+        """
+        カスタム条件をチェックするメソッド
+
+        Args:
+            gray_screen: グレースケール画像
+            condition: 条件辞書
+
+        Returns:
+            tuple: (成功フラグ, 検出情報辞書)
+        """
+        # Power1 のチェック
+        p1 = condition['power1']
+        p1_result = self._check_single_power(gray_screen, p1)
+
+        # Power2 のチェック
+        p2 = condition['power2']
+        p2_result = self._check_single_power(gray_screen, p2)
+
+        # 両方のパワーが条件を満たしているかチェック
+        success = p1_result['success'] and p2_result['success']
+
+        detected_info = {
+            'condition_name': condition['name'],
+            'power1': {
+                'type': p1['type'],
+                'detected': p1_result
+            },
+            'power2': {
+                'type': p2['type'],
+                'detected': p2_result
+            }
+        }
+
+        return success, detected_info
+
+    def _check_single_power(self, gray_screen, power_config):
+        """
+        単一のパワー条件をチェック
+
+        Args:
+            gray_screen: グレースケール画像
+            power_config: パワー設定辞書
+
+        Returns:
+            dict: 検出結果 {'success': bool, 'level': str, 'score': float, 'info': str}
+        """
+        power_type = power_config['type']
+        min_level = power_config['min_level']
+
+        if power_type == 'shiny':
+            # かがやきパワーチェック
+            attribute = power_config.get('attribute')
+            target_levels = get_target_levels(min_level)
+
+            if attribute:
+                # 特定タイプのチェック
+                key = f"target_icon_{attribute}"
+                lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels)
+                info = f"かがやき({attribute})"
+            else:
+                # 全タイプチェック
+                # 1. ターゲットタイプを順にチェック
+                lvl, score = None, 0.0
+                for t_name in TARGET_TYPES:
+                    key = f"target_icon_{t_name}"
+                    lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', key, target_levels)
+                    if lvl is not None:
+                        info = f"かがやき({t_name})"
+                        break
+
+                # 2. Type_All チェック
+                if lvl is None:
+                    lvl, score = self.detect_power_icon_level(gray_screen, 'shiny_label', 'type_all', target_levels)
+                    if lvl is not None:
+                        info = "かがやき(All)"
+                    else:
+                        info = "かがやき(N/A)"
+
+        elif power_type == 'size':
+            # サイズパワーチェック
+            size = power_config['size']
+            target_levels = get_target_levels(min_level)
+
+            lbl_key_map = {
+                'oyabun': 'lbl_oyabun',
+                'big': 'lbl_big',
+                'small': 'lbl_small'
+            }
+
+            lbl_key = lbl_key_map.get(size, f'lbl_{size}')
+            lvl, score = self.detect_power_level(gray_screen, lbl_key, target_levels)
+
+            size_name_map = {
+                'oyabun': 'オヤブン',
+                'big': 'でかでか',
+                'small': 'ちびちび'
+            }
+            info = size_name_map.get(size, size)
+
+        elif power_type == 'tool':
+            # どうぐパワーチェック
+            item_class = power_config['class']
+            target_levels = get_target_levels(min_level)
+
+            # アイコンキーを生成
+            if item_class == INPUT_ITEM_CLASS:
+                icon_key = "target_icon"
+            else:
+                icon_key = f"target_icon_{item_class}"
+                # テンプレートがロードされていない場合は動的にロード
+                if icon_key not in self.templates:
+                    filename = f"class_{item_class}.png"
+                    path = os.path.join(self.FOLDER, filename)
+                    if os.path.exists(path):
+                        self.templates[icon_key] = cv2.imread(path, 0)
+                        self.debug_log(f"Loaded tool icon template: {filename}")
+
+            lvl, score = self.detect_power_icon_level(gray_screen, 'tool_label', icon_key, target_levels)
+
+            class_name_map = {
+                'kinomi': 'きのみ',
+                'ball': 'ボール',
+                'coin': 'コイン',
+                'treasure': '宝物',
+                'special': '特別',
+                'candy': 'アメ'
+            }
+            info = class_name_map.get(item_class, item_class)
+
+        elif power_type == 'dosari':
+            # どっさりパワーチェック
+            target_levels = get_target_levels(min_level)
+            lvl, score = self.detect_power_level(gray_screen, 'dosari_label', target_levels)
+            info = "どっさり"
+
+        else:
+            # 不明なタイプ
+            return {'success': False, 'level': None, 'score': 0.0, 'info': f"Unknown({power_type})"}
+
+        # レベルチェック
+        level_num_map = {'lv3': 3, 'lv2': 2, 'lv1': 1}
+        detected_level = level_num_map.get(lvl, 0) if lvl else 0
+        success = detected_level >= min_level
+
+        return {
+            'success': success,
+            'level': lvl,
+            'score': score,
+            'info': info
+        }
+
+    def check_all_custom_conditions(self, gray_screen):
+        """
+        すべてのカスタム条件をチェックし、一致するものがあれば終了する
+
+        Args:
+            gray_screen: グレースケール画像
+
+        Returns:
+            tuple: (終了フラグ, 検出された条件情報)
+        """
+        if not ENABLE_CUSTOM_CONDITIONS or not CUSTOM_CONDITIONS:
+            return False, None
+
+        mode = 'shiny' if 'shiny' in CURRENT_RECIPE['targets'] else 'tool'
+        self.debug_log(f"Checking custom conditions for mode: {mode} ({len(CUSTOM_CONDITIONS)} conditions)")
+
+        for condition in CUSTOM_CONDITIONS:
+            success, detected_info = self.check_custom_condition(gray_screen, condition)
+            if success:
+                # 検出された条件をログ出力
+                p1_info = detected_info['power1']
+                p2_info = detected_info['power2']
+                self.log(f"★★★ カスタム条件ヒット({mode}): {detected_info['condition_name']} ★★★")
+                self.log(f"  Power1: {p1_info['detected']['info']}[{p1_info['detected']['level']}]({p1_info['detected']['score']:.2f})")
+                self.log(f"  Power2: {p2_info['detected']['info']}[{p2_info['detected']['level']}]({p2_info['detected']['score']:.2f})")
+                return True, detected_info
+
+        return False, None
 
     def makeDonut(self):
         self.log(f"ドーナツ作成開始 ({TIMING_MODE})")
@@ -875,6 +1137,12 @@ class ZA_DonutV188(ImageProcPythonCommand):
         if any_type_success:
             return True
 
+        # 特別終了条件(3): カスタム条件一致
+        if ENABLE_CUSTOM_CONDITIONS:
+            custom_success, custom_info = self.check_all_custom_conditions(gray)
+            if custom_success:
+                return True
+
         # 最終成功判定
         # 通常判定： (サイズ一致 AND かがやき一致) AND (ほかくパワー一致 OR ほかくパワー妥協成立)
         base_match = (res1_lvl is not None and res2_lvl is not None)
@@ -891,6 +1159,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
         else:
             self.log(f"Target: Tool/{INPUT_ITEM_CLASS} & Dosari")
         self.log(f"Timing Mode: {TIMING_MODE}")
+        if ENABLE_CUSTOM_CONDITIONS:
+            self.log(f"Custom Conditions: {len(CUSTOM_CONDITIONS)} loaded")
         
         while self.count < self.MAX_LOOP:
             self.count += 1

@@ -1080,14 +1080,16 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.log("ポケモンセンター（ベール）へ移動してセーブします")
         # キャンセルでフィールドに戻る
         self.pressRep(Button.B, repeat=5, interval=0.5)
+        self.wait(2.0)
         # メニューを開く
         self.press(Button.PLUS, 0.2, 1.0)
         # 地図を開く
         self.press(Button.Y, 0.2, 1.0)
         # カーソルを下に4回移動（ベールへ）
         self.pressRep(Hat.BTM, repeat=4, duration=0.1, interval=0.1)
+        self.wait(0.5)
         # 決定
-        self.press(Button.A, 0.2, 1.5)
+        self.pressRep(Button.A, repeat=2, interval=0.5)
         # 空中移動待機
         self.wait(4.0)
 

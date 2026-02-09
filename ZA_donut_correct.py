@@ -1078,7 +1078,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
         ポケモンセンター（ベール）へ移動してセーブするメソッド
         """
         self.log("ポケモンセンター（ベール）へ移動してセーブします")
-
+        # キャンセルでフィールドに戻る
+        self.pressRep(Button.B, repeat=5, interval=0.5)
         # メニューを開く
         self.press(Button.PLUS, 0.2, 1.0)
         # 地図を開く

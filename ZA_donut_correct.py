@@ -89,6 +89,10 @@ SETTING_DEBUG_LOG   = True # デバッグログをデフォルトで有効化
 # ドーナツの画像比較で指定秒数以上連続して引っかからない状態が続いたら、backup restartから再開する
 SETTING_NO_MATCH_TIMEOUT_SECONDS = 60
 
+# 【11. 昼夜切り替え間隔設定】
+# 昼夜切り替え処理を実行する間隔（分）
+SETTING_DAY_NIGHT_INTERVAL = 60
+
 # 【10. 目標達成後ループ設定】
 # -----------------------------------------------------------------------------
 # 目標達成後に再度ドーナツ作成を行うモード（True/False）
@@ -189,6 +193,12 @@ try:
     NO_MATCH_TIMEOUT_SECONDS = int(os.environ.get('NO_MATCH_TIMEOUT_SECONDS', str(SETTING_NO_MATCH_TIMEOUT_SECONDS)))
 except:
     NO_MATCH_TIMEOUT_SECONDS = 60
+
+# --- 昼夜切り替え間隔設定読み込み ---
+try:
+    DAY_NIGHT_INTERVAL = int(os.environ.get('DAY_NIGHT_INTERVAL', str(SETTING_DAY_NIGHT_INTERVAL))) * 60  # 分を秒に変換
+except:
+    DAY_NIGHT_INTERVAL = 3600  # デフォルト60分
 
 
 # =============================================================================
@@ -378,12 +388,16 @@ class ZA_DonutV188(ImageProcPythonCommand):
     THRESHOLD_ICON  = THRESHOLD_ICON
     THRESHOLD_LEVEL = THRESHOLD_LEVEL
     THRESHOLD_RESULT = THRESHOLD_RESULT
-    
+
     MAX_LOOP = MAX_LOOP
     RETRY_LIMIT = RETRY_LIMIT
     DEBUG_LOG = DEBUG_LOG
     ENABLE_LOOP_AFTER_SUCCESS = ENABLE_LOOP_AFTER_SUCCESS
     LOOP_AFTER_SUCCESS_MAX = LOOP_AFTER_SUCCESS_MAX
+
+    # その他の定数
+    FIELD_ENTER_WAIT = 2.5
+    USE_IMAGE_CHECK = True
 
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     FOLDER = os.path.abspath(os.path.join(SCRIPT_DIR, 'LegendsZA'))
@@ -1096,6 +1110,16 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.press(Button.PLUS, 0.2, 1.0)
         # 地図を開く
         self.press(Button.Y, 0.2, 1.0)
+
+        # --- エリア判定と動的移動ロジック ---
+        if self.isContainTemplate('LegendsZA/area_all.png', 0.88) < 0.88:
+            self.debug_log("エリア不一致：すべてへ移動を開始します")
+            self.press(Button.MINUS, 0.2, 1.0)
+            self.press(Button.A, 0.2, 0.5)
+            self.press(Button.B, 0.2, 0.5)
+            self.press(Button.Y, 0.2, 0.5)
+        # ------------------------------------
+
         # カーソルを下に4回移動（ベールへ）
         self.pressRep(Hat.BTM, repeat=4, duration=0.1, interval=0.1)
         self.wait(0.5)
@@ -1105,6 +1129,50 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.wait(4.0)
 
         self.log("セーブ完了、ポケモンセンター移動終了")
+
+    def smooth_day_night_change(self, target_time):
+        self.log(f"【昼夜切り替え】目標: {'昼' if target_time=='day' else '夜'}")
+        if not self.move_to_ibeeru_center(): return False
+        day_t = 'LegendsZA/time_day.png'
+        night_t = 'LegendsZA/time_night.png'
+        for attempt in range(6):
+            self.press(Direction.DOWN, 0.2); self.wait(0.5)
+            for a in range(6):
+                self.press(Button.A, 0.1); self.wait(0.65)
+                if USE_IMAGE_CHECK:
+                    try:
+                        day_score = self.isContainTemplate(day_t, 0.98)
+                        night_score = self.isContainTemplate(night_t, 0.98)
+                        if (target_time == "day" and day_score >= 0.98) or (target_time == "night" and night_score >= 0.98):
+                            self.log("目標時間帯到達")
+                            for _ in range(8): self.press(Button.B, wait=0.68)
+                            self.wait(1.8)
+                            return True
+                    except: pass
+            self.wait(7.0)
+            for _ in range(6): self.press(Button.B, wait=0.8)
+        self.wait(20.0)
+        for _ in range(8): self.press(Button.B, wait=0.7)
+        self.log("昼夜切り替え完了")
+        return True
+
+    def move_to_ibeeru_center(self):
+        self.log("イベールセンターへ移動")
+        self.press(Button.PLUS, 0.2); self.wait(3.5)
+        self.press(Button.Y, 0.1); self.wait(1.2)
+        self.press(Button.MINUS, 0.1); self.wait(0.9)
+        for _ in range(2): self.press(Hat.BTM, 0.1, 0.25)
+        self.press(Button.A, 0.1); self.wait(1.6)
+        self.press(Hat.TOP, 0.1); self.wait(0.4)
+        self.press(Button.A, 0.1); self.wait(0.8)
+        self.press(Button.A, 0.1); self.wait(FIELD_ENTER_WAIT)
+        self.press(Direction.LEFT, 0.65); self.wait(0.5)
+        self.press(Direction.UP, 0.25); self.wait(0.5)
+        for _ in range(6): self.press(Button.A, 0.1, 0.5)
+        self.wait(3.0)
+        for _ in range(6): self.press(Button.B, 0.1, 0.1)
+        self.log("イベールセンター着席完了")
+        return True
 
     def backupRestart(self):
         self.log(f"リセットシーケンス ({TIMING_MODE})")
@@ -1294,11 +1362,33 @@ class ZA_DonutV188(ImageProcPythonCommand):
         else:
             self.log("連続マッチなし時のバックアップ再開: 無効")
 
+        # 昼夜切り替え設定の表示
+        if DAY_NIGHT_INTERVAL > 0:
+            interval_min = DAY_NIGHT_INTERVAL // 60
+            self.log(f"昼夜切り替え: {interval_min}分間隔で実行")
+        else:
+            self.log("昼夜切り替え: 無効")
+
+        # 昼夜切り替え用の開始時刻を記録
+        day_night_check_start_time = time.time()
         # 連続マッチなしの開始時刻を追跡
         no_match_start_time = None
 
         while self.count < self.MAX_LOOP:
             self.count += 1
+
+            # 昼夜切り替えチェック（設定した間隔に1回）
+            day_night_elapsed = time.time() - day_night_check_start_time
+            if day_night_elapsed >= DAY_NIGHT_INTERVAL:
+                # 現在時刻から昼夜を判定
+                current_hour = datetime.now().hour
+                target_time = "day" if 6 <= current_hour < 18 else "night"
+                interval_min = DAY_NIGHT_INTERVAL // 60
+                self.log(f"【{interval_min}分経過】昼夜切り替えを実行します（ターゲット: {target_time}）")
+                self.smooth_day_night_change(target_time)
+                # タイマーをリセット
+                day_night_check_start_time = time.time()
+
             self.makeDonut()
 
             # 最初のドーナツ作成の前で時刻を記録（まだ記録されていない場合）

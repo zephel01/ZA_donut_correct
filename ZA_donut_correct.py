@@ -1384,10 +1384,18 @@ class ZA_DonutV188(ImageProcPythonCommand):
                 current_hour = datetime.now().hour
                 target_time = "day" if 6 <= current_hour < 18 else "night"
                 interval_min = DAY_NIGHT_INTERVAL // 60
-                self.log(f"【{interval_min}分経過】昼夜切り替えを実行します（ターゲット: {target_time}）")
+                self.log(f"【{interval_min}分経過】昼夜切り替えシーケンスを実行します（ターゲット: {target_time}）")
+                # backup_restart してから昼夜切り替え
+                self.backupRestart()
                 self.smooth_day_night_change(target_time)
+                # ベールへ移動してセーブ
+                self.moveToPokemonCenter()
+                self.log("ドーナツ作成を再開します")
                 # タイマーをリセット
                 day_night_check_start_time = time.time()
+                # 連続マッチなしタイマーもリセット
+                no_match_start_time = None
+                continue  # ドーナツ作成をスキップして次のループへ
 
             self.makeDonut()
 

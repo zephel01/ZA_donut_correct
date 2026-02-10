@@ -138,7 +138,7 @@ SETTING_CAPTURE_COMPROMISE = config['capture_compromise']
 
 # --- 設定値の読み込み処理 ---
 ENV_RECIPE = os.environ.get('RECIPE', os.environ.get('MODE', SETTING_RECIPE)).lower()
-INPUT_TYPE_RAW = os.environ.get('TYPE', SETTING_TYPE)
+# INPUT_TYPE_RAW は既に114行目で定義されている
 
 # 複数タイプ対応：カンマ区切りをリスト化し、空白除去・Capitalize
 TARGET_TYPES = [t.strip().capitalize() for t in INPUT_TYPE_RAW.split(',') if t.strip()]

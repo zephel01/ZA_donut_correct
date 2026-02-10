@@ -1139,77 +1139,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
     def smooth_day_night_change(self, target_time):
         self.log(f"【昼夜切り替え】目標: {'昼' if target_time=='day' else '夜'}")
         if not self.move_to_ibeeru_center(): return False
-        day_t = 'LegendsZA/time_day.png'
-        night_t = 'LegendsZA/time_night.png'
-
-        # テンプレートを事前に読み込む
-        day_path = os.path.join(self.FOLDER, day_t)
-        day_tmpl = None
-        if os.path.exists(day_path):
-            try:
-                day_tmpl = cv2.imread(day_path, cv2.IMREAD_GRAYSCALE)
-            except Exception as e:
-                self.log(f"エラー: 昼テンプレート読み込み失敗 - {e}")
-
-        night_path = os.path.join(self.FOLDER, night_t)
-        night_tmpl = None
-        if os.path.exists(night_path):
-            try:
-                night_tmpl = cv2.imread(night_path, cv2.IMREAD_GRAYSCALE)
-            except Exception as e:
-                self.log(f"エラー: 夜テンプレート読み込み失敗 - {e}")
-
-        for attempt in range(6):
-            self.press(Direction.DOWN, 0.2); self.wait(0.5)
-            for a in range(6):
-                self.press(Button.A, 0.1); self.wait(0.65)
-                if self.USE_IMAGE_CHECK:
-                    try:
-                        # カメラフレーム取得
-                        frame = self.camera.readFrame()
-                        if frame is None:
-                            self.log("  フレーム取得失敗 - リトライ")
-                            continue
-
-                        try:
-                            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                        except Exception as e:
-                            self.log(f"  エラー: 画像変換失敗 - {e}")
-                            continue
-
-                        # 昼判定
-                        day_score = 0.0
-                        if day_tmpl is not None:
-                            try:
-                                res_day = cv2.matchTemplate(gray, day_tmpl, cv2.TM_CCOEFF_NORMED)
-                                _, day_score, _, _ = cv2.minMaxLoc(res_day)
-                            except Exception as e:
-                                self.log(f"  エラー: 昼判定失敗 - {e}")
-
-                        # 夜判定
-                        night_score = 0.0
-                        if night_tmpl is not None:
-                            try:
-                                res_night = cv2.matchTemplate(gray, night_tmpl, cv2.TM_CCOEFF_NORMED)
-                                _, night_score, _, _ = cv2.minMaxLoc(res_night)
-                            except Exception as e:
-                                self.log(f"  エラー: 夜判定失敗 - {e}")
-
-                        self.log(f"  スコア - 昼:{day_score:.3f}, 夜:{night_score:.3f}")
-
-                        if (target_time == "day" and day_score >= 0.98) or (target_time == "night" and night_score >= 0.98):
-                            self.log("目標時間帯到達")
-                            for _ in range(8): self.press(Button.B, wait=0.68)
-                            self.wait(1.8)
-                            return True
-                    except Exception as e:
-                        self.log(f"画像判定エラー: {e}")
-                        pass
-            self.wait(7.0)
-            for _ in range(6): self.press(Button.B, wait=0.8)
-        self.wait(20.0)
-        for _ in range(8): self.press(Button.B, wait=0.7)
-        self.log("昼夜切り替え完了")
+        self.log("イベールセンター移動完了")
         return True
 
     def move_to_ibeeru_center(self):
@@ -1224,7 +1154,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.press(Hat.TOP, 0.2, 0.5)
         self.press(Button.A, 0.2, 0.5)
         self.press(Button.A, 0.2, 0.5)
-        self.wait(self.FIELD_ENTER_WAIT)
+        self.wait(4.0)
         self.press(Direction.LEFT, 0.65, 0.5)
         self.press(Direction.UP, 0.25, 0.5)
         for _ in range(6): self.press(Button.A, 0.1, 0.5)

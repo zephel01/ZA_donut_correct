@@ -7,6 +7,7 @@
 
 import os
 import cv2
+import numpy as np
 import time
 from datetime import datetime
 from Commands.PythonCommandBase import ImageProcPythonCommand
@@ -87,6 +88,7 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
 
         try:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            self.log(f"  画像サイズ: {gray.shape}")
         except Exception as e:
             self.log(f"エラー: 画像変換失敗 - {e}")
             return None
@@ -97,6 +99,7 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
         if os.path.exists(day_path):
             try:
                 day_tmpl = cv2.imread(day_path, 0)
+                self.log(f"  昼テンプレート読み込み成功: {day_tmpl.shape if day_tmpl is not None else 'N/A'}")
             except Exception as e:
                 self.log(f"エラー: 昼テンプレート読み込み失敗 - {e}")
 
@@ -106,6 +109,7 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
         if os.path.exists(night_path):
             try:
                 night_tmpl = cv2.imread(night_path, 0)
+                self.log(f"  夜テンプレート読み込み成功: {night_tmpl.shape if night_tmpl is not None else 'N/A'}")
             except Exception as e:
                 self.log(f"エラー: 夜テンプレート読み込み失敗 - {e}")
 
@@ -157,6 +161,7 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
             try:
                 day_tmpl = cv2.imread(day_path, 0)
                 self.log(f"昼テンプレート読み込み成功: {day_path}")
+                self.log(f"  テンプレートサイズ: {day_tmpl.shape if day_tmpl is not None else 'N/A'}")
             except Exception as e:
                 self.log(f"エラー: 昼テンプレート読み込み失敗 - {e}")
         else:
@@ -168,10 +173,19 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
             try:
                 night_tmpl = cv2.imread(night_path, 0)
                 self.log(f"夜テンプレート読み込み成功: {night_path}")
+                self.log(f"  テンプレートサイズ: {night_tmpl.shape if night_tmpl is not None else 'N/A'}")
             except Exception as e:
                 self.log(f"エラー: 夜テンプレート読み込み失敗 - {e}")
         else:
             self.log(f"警告: 夜テンプレートが存在しません: {night_path}")
+
+        # テンプレートが同じかをチェック
+        if day_tmpl is not None and night_tmpl is not None:
+            if day_tmpl.shape == night_tmpl.shape:
+                # 配列が同じかチェック
+                if np.array_equal(day_tmpl, night_tmpl):
+                    self.log("⚠️ 警告: time_day.png と time_night.png が同じ画像です！")
+                    self.log("⚠️ 昼夜判定が正しく動作しません。テンプレートファイルを確認してください。")
 
         for attempt in range(6):
             self.press(Direction.DOWN, 0.2); self.wait(0.5)

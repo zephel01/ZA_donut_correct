@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.7 (Custom Updated)
+ZA ドーナツ厳選 v2.0.0 (Major Update)
+・設定をconfig.jsonに外部化し、メインロジック修正時の設定上書きを防止 (Update v2.0.0)
+・昼夜切り替え機能の追加（設定間隔でイベールセンターに移動して昼夜変更、backup_restart後に再開）(Update v2.0.0)
+・設定ガイド（USER_CONFIG_GUIDE.md）を新規追加 (Update v2.0.0)
 ・レシピを外部ファイル化（recipes/ディレクトリ内の.pyファイルから読み込み）(Update v1.9.0)
 ・ユーザーが独自レシピを作成できる機能を追加 (Update v1.9.0)
 ・レシピの動的検出機能を実装 (Update v1.9.0)
@@ -15,8 +18,6 @@ ZA ドーナツ厳選 v1.9.7 (Custom Updated)
 ・重複機能の削除 (Update v1.9.4)
 ・テンプレートの追加(donut_conditions.json) (Update v1.9.5)
 ・連続マッチなし時のバックアップ再開機能を追加 (Update v1.9.6)
-・設定をconfig.jsonに外部化し、メインロジック修正時の設定上書きを防止 (Update v1.9.7)
-・昼夜切り替え機能の追加（60分間隔でイベールセンターに移動して昼夜変更）(Update v1.9.7)
 """
 
 import os
@@ -34,7 +35,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.9.7'
+VERSION = '2.0.0'
 
 # 【外部設定ファイルのパス】
 # config.json に詳細設定を記述してください

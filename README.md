@@ -1,4 +1,4 @@
-# ZA ドーナツ厳選マクロ v1.9.7
+# ZA ドーナツ厳選マクロ v2.0.0
 
   Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパワーやサイズを厳選するためのマクロです。
 
@@ -27,8 +27,9 @@
                   │   ├── rainbow3.py
                   │   └── template.py
                   ├── ZA_donut_correct.py  # 本体プログラム
-                  ├── config.json         # 設定ファイル（v1.9.7で追加）
+                  ├── config.json          # 設定ファイル（v2.0.0で追加）
                   ├── donut_conditions.json # カスタム条件ファイル
+                  ├── USER_CONFIG_GUIDE.md # 設定ガイド（v2.0.0で追加）
                   ├── USER_RECIPE_GUIDE.md  # ユーザー独自レシピ作成ガイド
                   └── README.md            # このファイル
   ```
@@ -55,28 +56,42 @@
  4. ZA ドーナツ厳選マクロを実行
  
  ## 主な機能
- 
- ### 0. レシピ外部ファイル化機能 (v1.9.0)
- レシピを外部ファイル（`recipes/` ディレクトリ内の `.py` ファイル）から読み込むことができます。
- - **ユーザー独自レシピ**: `recipes/template.py` をコピーして独自のレシピを作成可能
- - **自動的レシピ検出**: `recipes/` ディレクトリ内の `.py` ファイルを自動検出
- - **詳細は `USER_RECIPE_GUIDE.md` を参照**
- 
- ### 1. タイミング切り替え機能 (Switch1/Switch2)
- ハードウェアの読み込み速度に合わせて動作タイミングを最適化できます。
- - **Switch2**: 有機ELモデルや高速な読み込み向け
- - **Switch1**: 旧型やLiteなどの読み込みが遅いモデル向け
- 
- ### 2. 多彩な厳選モード
- - **色違い厳選 (shiny1~4)**: 指定したタイプの「かがやきパワー」と「サイズ（オヤブン/でかでか/ちびちび）」を同時に狙います。
- - **どうぐパワー厳選 (recipe1~3)**: 指定した道具クラス（きのみ、ボール等）のパワーを効率よく集めます。
-   - `TARGETS = ['tool']` となっており、どうぐパワー獲得が主な目的となります。
- 
-### 3. 目標達成後ループ機能
-目標達成後にポケモンセンター（ベール）へ移動してセーブし、ドーナツ作成を再開する機能です。
-- 設定で有効/無効を切り替え可能
-- 最大ループ回数を設定可能
-- 目標達成回数が最大回数に達すると終了します
+
+  ### 0. 設定ファイル外部化機能 (v2.0.0)
+  全ての設定を `config.json` で管理できるようになりました。
+  - **メインロジック保護**: `ZA_donut_correct.py` を更新しても設定値が上書きされない
+  - **一元管理**: 全設定項目を単一のJSONファイルで管理
+  - **詳細は `USER_CONFIG_GUIDE.md` を参照**
+
+  ### 1. レシピ外部ファイル化機能 (v1.9.0)
+  レシピを外部ファイル（`recipes/` ディレクトリ内の `.py` ファイル）から読み込むことができます。
+  - **ユーザー独自レシピ**: `recipes/template.py` をコピーして独自のレシピを作成可能
+  - **自動的レシピ検出**: `recipes/` ディレクトリ内の `.py` ファイルを自動検出
+  - **詳細は `USER_RECIPE_GUIDE.md` を参照**
+
+  ### 2. 昼夜切り替え機能 (v2.0.0)
+  指定した時間間隔で自動的に昼夜を切り替える機能です。
+  - **イベールセンター移動**: 設定間隔ごとにイベールセンターへ移動
+  - **昼夜自動判定**: 現在時刻（6:00-18:00で昼、それ以外は夜）に応じて自動的に昼夜変更
+  - **backup_restart**: 昼夜切り替え前にbackup_restartを実行し、その後ベールへ移動して再開
+  - **間隔調整**: `config.json` の `day_night_interval` で分単位で設定（0で無効）
+  - **デフォルト**: 60分ごとに実行
+
+  ### 3. タイミング切り替え機能 (Switch1/Switch2)
+  ハードウェアの読み込み速度に合わせて動作タイミングを最適化できます。
+  - **Switch2**: 有機ELモデルや高速な読み込み向け
+  - **Switch1**: 旧型やLiteなどの読み込みが遅いモデル向け
+
+  ### 4. 多彩な厳選モード
+  - **色違い厳選 (shiny1~4)**: 指定したタイプの「かがやきパワー」と「サイズ（オヤブン/でかでか/ちびちび）」を同時に狙います。
+  - **どうぐパワー厳選 (recipe1~3)**: 指定した道具クラス（きのみ、ボール等）のパワーを効率よく集めます。
+    - `TARGETS = ['tool']` となっており、どうぐパワー獲得が主な目的となります。
+
+  ### 5. 目標達成後ループ機能
+  目標達成後にポケモンセンター（ベール）へ移動してセーブし、ドーナツ作成を再開する機能です。
+  - 設定で有効/無効を切り替え可能
+  - 最大ループ回数を設定可能
+  - 目標達成回数が最大回数に達すると終了します
 
 **設定項目:**
 ```python
@@ -354,45 +369,48 @@ NO_MATCH_TIMEOUT_SECONDS=0 python ZA_donut_correct.py
  - **進行ログの可視化**: どのボタンを何秒押したか、現在のステップがどこかをリアルタイムでログ出力します。
  - **判定スコアの表示**: 画像認識の類似度スコアを表示し、閾値の調整を容易にします。
  
- ## 設定方法
- 
- ### 基本設定
- 
- `ZA_donut_correct.py` 内の「ユーザー設定エリア」を書き換えて使用してください。
- 
- - `SETTING_RECIPE`: 実行するレシピを選択
-     - `shiny1`: 色違い厳選（節約版）
-     - `shiny2`: 色違い厳選（タングのみx8）
-     - `shiny3`: 色違い厳選（ほかくパワー付与）
-     - `shiny4`: 色違い厳選（ほかくパワー付与・最新版）
-     - `recipe1`: どうぐパワー節約レシピ
-     - `recipe2`: どうぐパワー重視（カシブx8）
-     - `recipe3`: 節約レシピ3
-     - `rainbow1~3`: 特殊なレインボードーナツレシピ（`recipes/` ディレクトリから自動検出）
-     - `my_recipe`: ユーザーが `recipes/` ディレクトリに追加した独自レシピ
- - `SETTING_TYPE`: 狙うポケモンのタイプ（複数指定可能、例: 'Ghost, Dark'）
-     - Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy, All
- - `SETTING_ITEM_CLASS`: 狙う道具の種類（recipe/rainbow系用）
-     - kinomi (きのみ), ball (ボール), coin (コイン), treasure (お宝), special (とくべつ), candy (アメ)
- - `SETTING_SIZE`: 狙うサイズ（shiny系用）
-     - oyabun (オヤブン), big (でかでか), small (ちびちび)
- - `SETTING_TIMING_MODE`: 本体のモデルに合わせて `switch1`または`switch2`を指定
-     - switch2: 高速読み込み（有機EL等）
-     - switch1: 低速読み込み（旧型・Lite等）
- 
- ### 目標達成後ループ設定
- 
- | 設定項目 | 説明 | デフォルト |
- |-----------|------|-----------|
- | `SETTING_ENABLE_LOOP_AFTER_SUCCESS` | 目標達成後にループするか（True/False） | `False` |
- | `SETTING_LOOP_AFTER_SUCCESS_MAX` | 最大ループ回数 | `1` |
- 
- **環境変数で指定する場合:**
- ```bash
- ENABLE_LOOP_AFTER_SUCCESS=true
- LOOP_AFTER_SUCCESS_MAX=3
- python ZA_donut_correct.py
- ```
+  ## 設定方法
+
+  ### 設定ファイル（推奨）
+
+  v2.0.0 から、全ての設定を `config.json` で管理できます。**この方法を推奨します。**
+
+  **設定ファイルの場所:** `config.json`
+
+  **主な設定項目:**
+  - `recipe`: 使用するレシピ名
+  - `type`: ポケモンのタイプ（shiny系用）
+  - `item_class`: 道具の種類（recipe/rainbow系用）
+  - `size`: サイズの種類（shiny系用）
+  - `timing_mode`: 動作タイミングモード（switch1/switch2）
+  - `day_night_interval`: 昼夜切り替え間隔（分）- v2.0.0で追加
+  - `enable_loop_after_success`: 目標達成後ループを有効にするか
+  - `no_match_timeout_seconds`: 連続マッチなし時のバックアップ再開秒数
+  - など...
+
+  **詳細な設定項目と選択肢:** `USER_CONFIG_GUIDE.md` を参照してください。
+
+  ### 環境変数による設定（上書き）
+
+  `config.json` の設定は、環境変数で上書きできます。
+
+  **設定例:**
+  ```bash
+  # レシピ設定
+  export RECIPE=shiny1
+  export TYPE="Ghost, Dark"
+  export ITEM_CLASS=kinomi
+  export SIZE=small
+
+  # 昼夜切り替え設定（v2.0.0）
+  export DAY_NIGHT_INTERVAL=60
+
+  # その他の設定
+  export TIMING_MODE=switch2
+  export DEBUG_LOG=true
+  ```
+
+  **優先順位:** 環境変数 > config.json > デフォルト値
  
  ### ほかくパワー検知設定 (shiny系モードでのみ有効)
  
@@ -488,9 +506,26 @@ NO_MATCH_TIMEOUT_SECONDS=0 python ZA_donut_correct.py
  
  詳細は `USER_RECIPE_GUIDE.md` を参照してください。
  
-  ## 更新履歴
+   ## 更新履歴
 
-  ### v1.9.6
+   ### v2.0.0 (Major Update)
+   - **設定ファイル外部化機能を追加**
+     - 全ての設定を `config.json` で管理可能に
+     - メインロジック更新時の設定上書きを防止
+     - 環境変数、config.json、デフォルト値の優先順位で設定を適用
+   - **昼夜切り替え機能を追加**
+     - 指定時間間隔で自動的に昼夜を切り替え
+     - イベールセンターへ移動して昼夜変更（現在時刻で自動判定）
+     - backup_restart → 昼夜変更 → ベールへ移動 → ドーナツ作成再開のフローを実装
+     - 設定項目 `day_night_interval` を追加（分単位、0で無効）
+   - **設定ガイドの新規追加**
+     - `USER_CONFIG_GUIDE.md` を新規追加
+     - 全設定項目の詳細説明と選択肢を記載
+   - **フォルダ構成の更新**
+     - `config.json` の追加
+     - `USER_CONFIG_GUIDE.md` の追加
+
+   ### v1.9.6
   - **連続マッチなし時のバックアップ再開機能を追加**
     - 指定秒数以上連続してドーナツの画像比較で引っかからない状態が続いたら、backup restartから再開する機能
     - 設定項目 `SETTING_NO_MATCH_TIMEOUT_SECONDS` を追加

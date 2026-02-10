@@ -84,6 +84,10 @@ SETTING_MAX_LOOP    = 999999
 SETTING_RETRY_LIMIT = 2
 SETTING_DEBUG_LOG   = True # デバッグログをデフォルトで有効化
 
+# 連続マッチなし時のバックアップ再開設定
+# ドーナツの画像比較で指定秒数以上連続して引っかからない状態が続いたら、backup restartから再開する
+SETTING_NO_MATCH_TIMEOUT_SECONDS = 60
+
 # 【10. 目標達成後ループ設定】
 # -----------------------------------------------------------------------------
 # 目標達成後に再度ドーナツ作成を行うモード（True/False）
@@ -178,6 +182,12 @@ ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', 
 # --- 外部条件ファイル設定読み込み ---
 ENABLE_CUSTOM_CONDITIONS = True if os.environ.get('USE_CUSTOM_CONDITIONS', str(SETTING_USE_CUSTOM_CONDITIONS)).lower() == 'true' else False
 CONDITIONS_FILE = os.environ.get('CONDITIONS_FILE', SETTING_CONDITIONS_FILE)
+
+# --- 連続マッチなし時のバックアップ再開設定読み込み ---
+try:
+    NO_MATCH_TIMEOUT_SECONDS = int(os.environ.get('NO_MATCH_TIMEOUT_SECONDS', str(SETTING_NO_MATCH_TIMEOUT_SECONDS)))
+except:
+    NO_MATCH_TIMEOUT_SECONDS = 60
 
 
 # =============================================================================
@@ -1277,14 +1287,29 @@ class ZA_DonutV188(ImageProcPythonCommand):
         else:
             self.log("目標達成後ループ: 無効")
 
+        # 連続マッチなし時のバックアップ再開設定の表示
+        if NO_MATCH_TIMEOUT_SECONDS > 0:
+            self.log(f"連続マッチなし時のバックアップ再開: {NO_MATCH_TIMEOUT_SECONDS}秒で再開")
+        else:
+            self.log("連続マッチなし時のバックアップ再開: 無効")
+
+        # 連続マッチなしの開始時刻を追跡
+        no_match_start_time = None
+
         while self.count < self.MAX_LOOP:
             self.count += 1
             self.makeDonut()
+
+            # 最初のドーナツ作成の前で時刻を記録（まだ記録されていない場合）
+            if no_match_start_time is None:
+                no_match_start_time = time.time()
 
             if self.checkDonutResult():
                 self.success_count += 1
                 self.log(f"★★★ 目標達成！(回数: {self.success_count}/{self.LOOP_AFTER_SUCCESS_MAX}) ★★★")
                 self.save_capture("SUCCESS")
+                # 成功時はマッチなし時間をリセット
+                no_match_start_time = None
 
                 # 目標達成後ループ機能の判定
                 if self.ENABLE_LOOP_AFTER_SUCCESS and self.success_count < self.LOOP_AFTER_SUCCESS_MAX:
@@ -1305,6 +1330,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
                     self.log(f"★★★ 目標達成！(Retry {i+1}, 回数: {self.success_count}/{self.LOOP_AFTER_SUCCESS_MAX}) ★★★")
                     self.save_capture("SUCCESS")
                     retry_success = True
+                    # 成功時はマッチなし時間をリセット
+                    no_match_start_time = None
 
                     # 目標達成後ループ機能の判定
                     if self.ENABLE_LOOP_AFTER_SUCCESS and self.success_count < self.LOOP_AFTER_SUCCESS_MAX:
@@ -1314,6 +1341,15 @@ class ZA_DonutV188(ImageProcPythonCommand):
                         break
                     else:
                         break
+
+            # 連続マッチなしのタイムアウトチェック
+            if no_match_start_time is not None and NO_MATCH_TIMEOUT_SECONDS > 0:
+                elapsed_time = time.time() - no_match_start_time
+                if elapsed_time >= NO_MATCH_TIMEOUT_SECONDS:
+                    self.log(f"⚠️ 連続マッチなしが {elapsed_time:.1f}秒を超えました。backup restartから再開します")
+                    self.backupRestart()
+                    no_match_start_time = None
+                    continue
 
             if retry_success:
                 if self.ENABLE_LOOP_AFTER_SUCCESS and self.success_count < self.LOOP_AFTER_SUCCESS_MAX:

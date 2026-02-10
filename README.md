@@ -1,4 +1,4 @@
-# ZA ドーナツ厳選マクロ v1.9.5
+# ZA ドーナツ厳選マクロ v1.9.6
  
  Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパワーやサイズを厳選するためのマクロです。
  
@@ -104,8 +104,36 @@ python ZA_donut_correct.py
   - 2回クリア → ポケモンセンターへ移動してセーブ → 再開
   - 3回クリア → 終了
 
- 
- ### 4. カスタム条件機能
+### 4. 連続マッチなし時のバックアップ再開機能
+ドーナツの画像比較で指定秒数以上連続して引っかからない状態が続いたら、backup restartから再開する機能です。
+- 長時間マッチしない状況で自動的にリセットを行い、効率よく厳選を継続できます
+- 設定で有効/無効を切り替え可能
+- 0秒に設定すると機能が無効化されます
+
+**設定項目:**
+```python
+# 連続マッチなし時のバックアップ再開設定
+# ドーナツの画像比較で指定秒数以上連続して引っかからない状態が続いたら、backup restartから再開する
+SETTING_NO_MATCH_TIMEOUT_SECONDS = 60
+```
+
+**環境変数で指定する場合:**
+```bash
+# 120秒に設定して実行
+NO_MATCH_TIMEOUT_SECONDS=120 python ZA_donut_correct.py
+
+# 機能を無効化
+NO_MATCH_TIMEOUT_SECONDS=0 python ZA_donut_correct.py
+```
+
+**動作例:**
+- `SETTING_NO_MATCH_TIMEOUT_SECONDS = 60`
+  - 連続で60秒間マッチしない場合、backup restartから再開
+- `SETTING_NO_MATCH_TIMEOUT_SECONDS = 0`
+  - 機能が無効化され、通常動作（backup restartはリトライ失敗時のみ実行）
+
+
+### 5. カスタム条件機能
  外部ファイル（`donut_conditions.json`）から任意の条件を定義し、その条件に一致するドーナツが出現した場合に自動的に終了する機能です。
  
  **対応するパワーテンプレート（5種類）:**
@@ -459,9 +487,22 @@ python ZA_donut_correct.py
  
  詳細は `USER_RECIPE_GUIDE.md` を参照してください。
  
- ## 更新履歴
- 
- ### v1.9.3
+  ## 更新履歴
+
+  ### v1.9.6
+  - **連続マッチなし時のバックアップ再開機能を追加**
+    - 指定秒数以上連続してドーナツの画像比較で引っかからない状態が続いたら、backup restartから再開する機能
+    - 設定項目 `SETTING_NO_MATCH_TIMEOUT_SECONDS` を追加
+    - 環境変数 `NO_MATCH_TIMEOUT_SECONDS` で設定可能
+    - 0秒に設定すると機能を無効化
+
+  ### v1.9.5
+  - テンプレートの追加(donut_conditions.json)
+
+  ### v1.9.4
+  - 重複機能の削除
+
+  ### v1.9.3
  - **目標達成後ループ機能を追加**
    - 目標達成後にポケモンセンター（ベール）へ移動してセーブする機能
    - 最大ループ回数の設定（`SETTING_LOOP_AFTER_SUCCESS_MAX`）

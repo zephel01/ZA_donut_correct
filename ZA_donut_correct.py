@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.5 (Custom Updated)
+ZA ドーナツ厳選 v1.9.6 (Custom Updated)
 ・レシピを外部ファイル化（recipes/ディレクトリ内の.pyファイルから読み込み）(Update v1.9.0)
 ・ユーザーが独自レシピを作成できる機能を追加 (Update v1.9.0)
 ・レシピの動的検出機能を実装 (Update v1.9.0)
@@ -14,6 +14,7 @@ ZA ドーナツ厳選 v1.9.5 (Custom Updated)
 ・目標達成後ループ機能を追加 (Update v1.9.3)
 ・重複機能の削除 (Update v1.9.4)
 ・テンプレートの追加(donut_conditions.json) (Update v1.9.5)
+・連続マッチなし時のバックアップ再開機能を追加 (Update v1.9.6)
 """
 
 import os
@@ -31,7 +32,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.9.5'
+VERSION = '1.9.6'
 
 # 【1. レベル/レシピ指定】
 #   recipes/ ディレクトリ内の .py ファイルを自動検出します

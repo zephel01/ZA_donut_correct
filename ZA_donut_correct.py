@@ -1158,9 +1158,10 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.press(Direction.LEFT, 0.65, 0.5)
         self.press(Direction.UP, 0.25, 0.5)
         for _ in range(6): self.press(Button.A, 0.1, 0.5)
-        self.wait(3.0)
+        self.wait(15.0)
         for _ in range(6): self.press(Button.B, 0.1, 0.1)
         self.log("イベールセンター着席完了")
+        self.wait(2.0)
         return True
 
     def backupRestart(self):

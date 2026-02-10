@@ -150,15 +150,61 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
         day_t = 'LegendsZA/time_day.png'
         night_t = 'LegendsZA/time_night.png'
 
+        # テンプレートを事前に読み込む
+        day_path = os.path.join(self.FOLDER, day_t)
+        day_tmpl = None
+        if os.path.exists(day_path):
+            try:
+                day_tmpl = cv2.imread(day_path, 0)
+            except Exception as e:
+                self.log(f"エラー: 昼テンプレート読み込み失敗 - {e}")
+
+        night_path = os.path.join(self.FOLDER, night_t)
+        night_tmpl = None
+        if os.path.exists(night_path):
+            try:
+                night_tmpl = cv2.imread(night_path, 0)
+            except Exception as e:
+                self.log(f"エラー: 夜テンプレート読み込み失敗 - {e}")
+
         for attempt in range(6):
             self.press(Direction.DOWN, 0.2); self.wait(0.5)
             for a in range(6):
                 self.press(Button.A, 0.1); self.wait(0.65)
                 if USE_IMAGE_CHECK:
                     try:
-                        day_score = self.isContainTemplate(day_t, 0.98)
-                        night_score = self.isContainTemplate(night_t, 0.98)
+                        # カメラフレーム取得（リトライ付き）
+                        frame = self.camera.readFrame()
+                        if frame is None:
+                            self.log("  フレーム取得失敗 - リトライ")
+                            continue
+
+                        try:
+                            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                        except Exception as e:
+                            self.log(f"  エラー: 画像変換失敗 - {e}")
+                            continue
+
+                        # 昼判定
+                        day_score = 0.0
+                        if day_tmpl is not None:
+                            try:
+                                res_day = cv2.matchTemplate(gray, day_tmpl, cv2.TM_CCOEFF_NORMED)
+                                _, day_score, _, _ = cv2.minMaxLoc(res_day)
+                            except Exception as e:
+                                self.log(f"  エラー: 昼判定失敗 - {e}")
+
+                        # 夜判定
+                        night_score = 0.0
+                        if night_tmpl is not None:
+                            try:
+                                res_night = cv2.matchTemplate(gray, night_tmpl, cv2.TM_CCOEFF_NORMED)
+                                _, night_score, _, _ = cv2.minMaxLoc(res_night)
+                            except Exception as e:
+                                self.log(f"  エラー: 夜判定失敗 - {e}")
+
                         self.log(f"  昼スコア: {day_score:.3f}, 夜スコア: {night_score:.3f}")
+                        
                         if (target_time == "day" and day_score >= 0.98) or (target_time == "night" and night_score >= 0.98):
                             self.log("目標時間帯到達")
                             for _ in range(8): self.press(Button.B, wait=0.68)

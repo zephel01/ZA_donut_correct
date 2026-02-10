@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v1.9.6 (Custom Updated)
+ZA ドーナツ厳選 v1.9.7 (Custom Updated)
 ・レシピを外部ファイル化（recipes/ディレクトリ内の.pyファイルから読み込み）(Update v1.9.0)
 ・ユーザーが独自レシピを作成できる機能を追加 (Update v1.9.0)
 ・レシピの動的検出機能を実装 (Update v1.9.0)
@@ -15,6 +15,8 @@ ZA ドーナツ厳選 v1.9.6 (Custom Updated)
 ・重複機能の削除 (Update v1.9.4)
 ・テンプレートの追加(donut_conditions.json) (Update v1.9.5)
 ・連続マッチなし時のバックアップ再開機能を追加 (Update v1.9.6)
+・設定をconfig.jsonに外部化し、メインロジック修正時の設定上書きを防止 (Update v1.9.7)
+・昼夜切り替え機能の追加（60分間隔でイベールセンターに移動して昼夜変更）(Update v1.9.7)
 """
 
 import os
@@ -32,104 +34,106 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '1.9.6'
+VERSION = '1.9.7'
 
-# 【1. レベル/レシピ指定】
-#   recipes/ ディレクトリ内の .py ファイルを自動検出します
-#   'shiny1'   : 色違い厳選レシピ1 (節約版)
-#   'shiny2'   : 色違い厳選レシピ2 (タンガのみｘ8)
-#   'shiny3'   : 色違い厳選レシピ3 (ほかくパワー付与レシピ)
-#   'shiny4'   : 色違い厳選レシピ4 (ほかくパワー付与レシピ2 New)
-#   'recipe1'  : どうぐパワー節約レシピ
-#   'recipe2'  : どうぐパワー重視レシピ/カシブx8
-#   'recipe3'  : 節約レシピ recipe3
-#   'rainbow1' : バコウ1,ウタン1,ナモ4,ロゼル2 (TARGETS=['tool'])
-#   'rainbow2' : バコウ1,ヨロギ1,ハバン1,ロゼル5 (TARGETS=['tool'])
-#   'rainbow3' : ウタン1,ヨロギ1,ナモ4,ロゼル2 (TARGETS=['tool'])
-#   my_recipe  : recipes/ ディレクトリに追加した独自レシピ
-SETTING_RECIPE = 'recipe1'
-
-# 【2. ポケモンのタイプ】(shiny系用)
-#   ★ 複数指定が可能。カンマ区切りで入力してください。
-#   [一覧]: Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground,
-#           Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy, All
-#   例: 'Ghost'
-#   例: 'Ghost, Dark, Dragon'
-# -----------------------------------------------------------------------------
-SETTING_TYPE = 'Dradon'
-
-# 【3. 道具の種類 (クラス)】(recipe/rainbow系用)
-#   [一覧]: kinomi, ball, coin, treasure, special, candy
-# -----------------------------------------------------------------------------
-SETTING_ITEM_CLASS = 'kinomi'
-
-# 【4. サイズの種類】(shiny系用)
-#   [一覧]: oyabun, big, small
-# -----------------------------------------------------------------------------
-SETTING_SIZE = 'small'
-
-# 【5. パワーの許容レベル】(3=厳選 / 2=妥協)
-SETTING_LEVEL_SIZE = 3  # サイズ系 (ちびちび/オヤブン/どっさり)
-SETTING_LEVEL_EXTRA = 3 # その他 (かがやき/どうぐ)
-
-# 【6. 詳細設定 (感度・回数・ログ)】
-# -----------------------------------------------------------------------------
-# 画像認識のしきい値 (0.00 〜 1.00)
-SETTING_THRESHOLD_LABEL = 0.75
-SETTING_THRESHOLD_ICON  = 0.75
-SETTING_THRESHOLD_LEVEL = 0.89
-SETTING_THRESHOLD_RESULT = 0.80 # 結果画面検知のしきい値
-
-# 動作設定
-SETTING_MAX_LOOP    = 999999
-SETTING_RETRY_LIMIT = 2
-SETTING_DEBUG_LOG   = True # デバッグログをデフォルトで有効化
-
-# 連続マッチなし時のバックアップ再開設定
-# ドーナツの画像比較で指定秒数以上連続して引っかからない状態が続いたら、backup restartから再開する
-SETTING_NO_MATCH_TIMEOUT_SECONDS = 60
-
-# 【11. 昼夜切り替え間隔設定】
-# 昼夜切り替え処理を実行する間隔（分）
-SETTING_DAY_NIGHT_INTERVAL = 60
-
-# 【10. 目標達成後ループ設定】
-# -----------------------------------------------------------------------------
-# 目標達成後に再度ドーナツ作成を行うモード（True/False）
-SETTING_ENABLE_LOOP_AFTER_SUCCESS = False
-# 目標達成後の最大ループ回数
-SETTING_LOOP_AFTER_SUCCESS_MAX = 1
-
-# 【7. 外部条件ファイルによる特別停止オプション】
-# donut_conditions.json に定義された条件に一致する場合に終了する
-# True/False
-SETTING_USE_CUSTOM_CONDITIONS = False
-
-# 外部条件ファイルのパス (デフォルト: donut_conditions.json)
-SETTING_CONDITIONS_FILE = 'donut_conditions.json'
-
-# 【8. 動作タイミング設定 (switch1/switch2)】
-# switch1: 旧型/Liteなど読み込みが遅い場合 (待機長め・ボタン連打多め)
-# switch2: 有機ELなど読み込みが速い場合 (待機短め・最適化)
-SETTING_TIMING_MODE = 'switch2'
-
-# 【9. ほかくパワー検知オプション】(shiny系モードでのみ有効)
-# -----------------------------------------------------------------------------
-# ほかくパワー検知を利用するか
-SETTING_ENABLE_CAPTURE_POWER = False
-
-# ほかくパワーの目標レベル (3=厳選 / 2=妥協 / 1=さらに妥協)
-# かがやきパワーと同じレベル指定でOK（共通利用）
-SETTING_LEVEL_CAPTURE = 1  # 1, 2, 3 のいずれか
-
-# ほかくパワー妥協オプション
-# Trueの場合：かがやきパワーが「ぜんぶ」(Type_All)かつ指定Lv以上で、
-#            ほかくパワーのタイプが「かがやきターゲットタイプ」に含まれていれば採用
-SETTING_CAPTURE_COMPROMISE = True
+# 【外部設定ファイルのパス】
+# config.json に詳細設定を記述してください
+# ここで指定したファイルから設定を読み込みます
+CONFIG_FILE = 'config.json'
 
 # =============================================================================
 # ▲▲▲ 設定エリアここまで ▲▲▲
 # =============================================================================
+
+# --- 設定ファイル読み込み関数 ---
+def load_config_file(config_path):
+    """
+    外部設定ファイルから設定値を読み込む関数
+
+    Args:
+        config_path: 設定ファイルのパス
+
+    Returns:
+        dict: 設定値の辞書
+    """
+    default_config = {
+        'recipe': 'recipe1',
+        'type': 'Dradon',
+        'item_class': 'kinomi',
+        'size': 'small',
+        'level_size': 3,
+        'level_extra': 3,
+        'threshold_label': 0.75,
+        'threshold_icon': 0.75,
+        'threshold_level': 0.89,
+        'threshold_result': 0.80,
+        'max_loop': 999999,
+        'retry_limit': 2,
+        'debug_log': True,
+        'no_match_timeout_seconds': 60,
+        'day_night_interval': 60,
+        'enable_loop_after_success': False,
+        'loop_after_success_max': 1,
+        'use_custom_conditions': False,
+        'conditions_file': 'donut_conditions.json',
+        'timing_mode': 'switch2',
+        'enable_capture_power': False,
+        'level_capture': 1,
+        'capture_compromise': True
+    }
+
+    # スクリプトディレクトリを取得
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    abs_config_path = os.path.join(script_dir, config_path)
+
+    # 設定ファイルが存在する場合は読み込み
+    if os.path.exists(abs_config_path):
+        try:
+            with open(abs_config_path, 'r', encoding='utf-8') as f:
+                file_config = json.load(f)
+                # デフォルト設定とマージ（ファイルの設定を優先）
+                default_config.update(file_config)
+                print(f"[System] Config loaded from: {abs_config_path}")
+        except Exception as e:
+            print(f"[Warning] Failed to load config file: {e}")
+            print(f"[System] Using default config")
+    else:
+        print(f"[Warning] Config file not found: {abs_config_path}")
+        print(f"[System] Using default config")
+
+    return default_config
+
+
+# --- 設定値の読み込み処理 ---
+# 設定ファイルから読み込み
+config = load_config_file(CONFIG_FILE)
+
+# 各設定値を環境変数 > 設定ファイル > デフォルト値 の順で決定
+SETTING_RECIPE = os.environ.get('RECIPE', os.environ.get('MODE', config['recipe'])).lower()
+INPUT_TYPE_RAW = os.environ.get('TYPE', config['type'])
+
+# 残りの設定値をロード
+SETTING_ITEM_CLASS = config['item_class']
+SETTING_SIZE = config['size']
+SETTING_LEVEL_SIZE = config['level_size']
+SETTING_LEVEL_EXTRA = config['level_extra']
+SETTING_THRESHOLD_LABEL = config['threshold_label']
+SETTING_THRESHOLD_ICON = config['threshold_icon']
+SETTING_THRESHOLD_LEVEL = config['threshold_level']
+SETTING_THRESHOLD_RESULT = config['threshold_result']
+SETTING_MAX_LOOP = config['max_loop']
+SETTING_RETRY_LIMIT = config['retry_limit']
+SETTING_DEBUG_LOG = config['debug_log']
+SETTING_NO_MATCH_TIMEOUT_SECONDS = config['no_match_timeout_seconds']
+SETTING_DAY_NIGHT_INTERVAL = config['day_night_interval']
+SETTING_ENABLE_LOOP_AFTER_SUCCESS = config['enable_loop_after_success']
+SETTING_LOOP_AFTER_SUCCESS_MAX = config['loop_after_success_max']
+SETTING_USE_CUSTOM_CONDITIONS = config['use_custom_conditions']
+SETTING_CONDITIONS_FILE = config['conditions_file']
+SETTING_TIMING_MODE = config['timing_mode']
+SETTING_ENABLE_CAPTURE_POWER = config['enable_capture_power']
+SETTING_LEVEL_CAPTURE = config['level_capture']
+SETTING_CAPTURE_COMPROMISE = config['capture_compromise']
 
 # --- 設定値の読み込み処理 ---
 ENV_RECIPE = os.environ.get('RECIPE', os.environ.get('MODE', SETTING_RECIPE)).lower()
@@ -139,6 +143,7 @@ INPUT_TYPE_RAW = os.environ.get('TYPE', SETTING_TYPE)
 TARGET_TYPES = [t.strip().capitalize() for t in INPUT_TYPE_RAW.split(',') if t.strip()]
 TARGET_TYPE_Display = "/".join(TARGET_TYPES)
 
+# 環境変数で上書き可能な設定値の読み込み（環境変数 > 設定ファイル）
 SIZE = os.environ.get('SIZE', SETTING_SIZE).lower()
 INPUT_ITEM_CLASS = os.environ.get('ITEM_CLASS', SETTING_ITEM_CLASS).lower()
 
@@ -1139,7 +1144,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             self.press(Direction.DOWN, 0.2); self.wait(0.5)
             for a in range(6):
                 self.press(Button.A, 0.1); self.wait(0.65)
-                if USE_IMAGE_CHECK:
+                if self.USE_IMAGE_CHECK:
                     try:
                         day_score = self.isContainTemplate(day_t, 0.98)
                         night_score = self.isContainTemplate(night_t, 0.98)
@@ -1158,19 +1163,22 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
     def move_to_ibeeru_center(self):
         self.log("イベールセンターへ移動")
-        self.press(Button.PLUS, 0.2); self.wait(3.5)
-        self.press(Button.Y, 0.1); self.wait(1.2)
-        self.press(Button.MINUS, 0.1); self.wait(0.9)
+        self.wait(1.0)
+        self.press(Button.PLUS, 0.2, 0.5)
+        self.wait(1.0)
+        self.press(Button.Y, 0.2, 0.4)
+        self.press(Button.MINUS, 0.2, 1.0)
         for _ in range(2): self.press(Hat.BTM, 0.1, 0.25)
-        self.press(Button.A, 0.1); self.wait(1.6)
-        self.press(Hat.TOP, 0.1); self.wait(0.4)
-        self.press(Button.A, 0.1); self.wait(0.8)
-        self.press(Button.A, 0.1); self.wait(self.FIELD_ENTER_WAIT)
-        self.press(Direction.LEFT, 0.65); self.wait(0.5)
-        self.press(Direction.UP, 0.25); self.wait(0.5)
+        self.press(Button.A, 0.2, 0.5)
+        self.press(Hat.TOP, 0.1, 0.5)
+        self.press(Button.A, 0.1, 0.5)
+        self.press(Button.A, 0.1, 0.5)
+        self.wait(self.FIELD_ENTER_WAIT)
+        self.press(Direction.LEFT, 0.65, 0.5)
+        self.press(Direction.UP, 0.25, 0.5)
         for _ in range(6): self.press(Button.A, 0.1, 0.5)
         self.wait(3.0)
-        for _ in range(6): self.press(Button.B, 0.1, 0.1)
+        for _ in range(6): self.press(Button.B, 0.1, 0.5)
         self.log("イベールセンター着席完了")
         return True
 

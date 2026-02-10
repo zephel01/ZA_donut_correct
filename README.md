@@ -1,36 +1,37 @@
-# ZA ドーナツ厳選マクロ v1.9.6
- 
- Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパワーやサイズを厳選するためのマクロです。
- 
+# ZA ドーナツ厳選マクロ v1.9.7
+
+  Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパワーやサイズを厳選するためのマクロです。
+
 ## フォルダ構成
- 
- ```
- Poke-Controller-Modified-Extension/
- └── SerialController/
-     └── Commands/
-         └── PythonCommands/
-             └── ZA_donut_correct/
-                 ├── LegendsZA/          # 画像ファイル（テンプレート）
-                 │   ├── shiny_label.png
-                 │   ├── type_all.png
-                 │   └── ... (その他画像)
-                 ├── recipes/             # レシピファイル
-                 │   ├── shiny1.py
-                 │   ├── shiny2.py
-                 │   ├── shiny3.py
-                 │   ├── shiny4.py
-                 │   ├── recipe1.py
-                 │   ├── recipe2.py
-                 │   ├── recipe3.py
-                 │   ├── rainbow1.py
-                 │   ├── rainbow2.py
-                 │   ├── rainbow3.py
-                 │   └── template.py
-                 ├── ZA_donut_correct.py  # 本体プログラム
-                 ├── donut_conditions.json # カスタム条件ファイル
-                 ├── USER_RECIPE_GUIDE.md  # ユーザー独自レシピ作成ガイド
-                 └── README.md            # このファイル
- ```
+
+  ```
+  Poke-Controller-Modified-Extension/
+  └── SerialController/
+      └── Commands/
+          └── PythonCommands/
+              └── ZA_donut_correct/
+                  ├── LegendsZA/          # 画像ファイル（テンプレート）
+                  │   ├── shiny_label.png
+                  │   ├── type_all.png
+                  │   └── ... (その他画像)
+                  ├── recipes/             # レシピファイル
+                  │   ├── shiny1.py
+                  │   ├── shiny2.py
+                  │   ├── shiny3.py
+                  │   ├── shiny4.py
+                  │   ├── recipe1.py
+                  │   ├── recipe2.py
+                  │   ├── recipe3.py
+                  │   ├── rainbow1.py
+                  │   ├── rainbow2.py
+                  │   ├── rainbow3.py
+                  │   └── template.py
+                  ├── ZA_donut_correct.py  # 本体プログラム
+                  ├── config.json         # 設定ファイル（v1.9.7で追加）
+                  ├── donut_conditions.json # カスタム条件ファイル
+                  ├── USER_RECIPE_GUIDE.md  # ユーザー独自レシピ作成ガイド
+                  └── README.md            # このファイル
+  ```
  
 ## インストール手順
  

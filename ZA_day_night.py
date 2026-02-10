@@ -47,16 +47,14 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
     def move_to_ibeeru_center(self):
         """イベールセンターへ移動して椅子に座る"""
         self.log("イベールセンターへ移動")
-        self.press(Button.PLUS, 0.2, 0.5)
-        self.wait(1.0)
-        self.press(Button.Y, 0.2, 0.4)
-        self.press(Button.MINUS, 0.2, 1.0)
+        self.press(Button.PLUS, 0.2); self.wait(3.5)
+        self.press(Button.Y, 0.1); self.wait(1.2)
+        self.press(Button.MINUS, 0.1); self.wait(0.9)
         for _ in range(2): self.press(Hat.BTM, 0.1, 0.25)
-        self.press(Button.A, 0.2, 0.5)
-        self.press(Hat.TOP, 0.2, 0.5)
-        self.press(Button.A, 0.2, 0.5)
-        self.press(Button.A, 0.2, 0.5)
-        self.wait(FIELD_ENTER_WAIT)
+        self.press(Button.A, 0.1); self.wait(1.6)
+        self.press(Hat.TOP, 0.1); self.wait(0.4)
+        self.press(Button.A, 0.1); self.wait(0.8)
+        self.press(Button.A, 0.1); self.wait(FIELD_ENTER_WAIT)
         self.press(Direction.LEFT, 0.65, 0.5)
         self.press(Direction.UP, 0.25, 0.5)
         for _ in range(6): self.press(Button.A, 0.1, 0.5)
@@ -72,50 +70,57 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
 
         self.log("現在の時間帯を確認中...")
 
-        # カメラフレーム取得（リトライ付き）
-        max_retries = 5
-        frame = None
-        for retry in range(max_retries):
-            frame = self.camera.readFrame()
-            if frame is not None:
-                break
-            self.log(f"フレーム取得リトライ {retry + 1}/{max_retries}")
-            time.sleep(0.5)
+        # テンプレート読み込み（1回だけ行う）
+        day_path = os.path.join(self.FOLDER, day_t)
+        day_tmpl = None
+        day_loaded = False
+        
+        if os.path.exists(day_path):
+            try:
+                day_tmpl = cv2.imread(day_path, cv2.IMREAD_GRAYSCALE)
+                if day_tmpl is not None:
+                    day_loaded = True
+                    self.log(f"  昼テンプレート読み込み: {day_path}, サイズ: {day_tmpl.shape}")
+                else:
+                    self.log(f"  エラー: 昼テンプレートが読めませんでした: {day_path}")
+            except Exception as e:
+                self.log(f"  エラー: 昼テンプレート読み込み失敗 - {e}")
+        else:
+            self.log(f"  警告: 昼テンプレートが存在しません: {day_path}")
 
+        night_path = os.path.join(self.FOLDER, night_t)
+        night_tmpl = None
+        night_loaded = False
+        
+        if os.path.exists(night_path):
+            try:
+                night_tmpl = cv2.imread(night_path, cv2.IMREAD_GRAYSCALE)
+                if night_tmpl is not None:
+                    night_loaded = True
+                    self.log(f"  夜テンプレート読み込み: {night_path}, サイズ: {night_tmpl.shape}")
+                else:
+                    self.log(f"  エラー: 夜テンプレートが読めませんでした: {night_path}")
+            except Exception as e:
+                self.log(f"  エラー: 夜テンプレート読み込み失敗 - {e}")
+        else:
+            self.log(f"  警告: 夜テンプレートが存在しません: {night_path}")
+
+        # カメラフレーム取得
+        frame = self.camera.readFrame()
         if frame is None:
             self.log("エラー: 画面取得不可")
             return None
 
         try:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            self.log(f"  画像サイズ: {gray.shape}")
+            self.log(f"  画面サイズ: {gray.shape}")
         except Exception as e:
             self.log(f"エラー: 画像変換失敗 - {e}")
             return None
 
-        # 昼のテンプレートを確認
-        day_path = os.path.join(self.FOLDER, day_t)
-        day_tmpl = None
-        if os.path.exists(day_path):
-            try:
-                day_tmpl = cv2.imread(day_path, 0)
-                self.log(f"  昼テンプレート読み込み成功: {day_tmpl.shape if day_tmpl is not None else 'N/A'}")
-            except Exception as e:
-                self.log(f"エラー: 昼テンプレート読み込み失敗 - {e}")
-
-        # 夜のテンプレートを確認
-        night_path = os.path.join(self.FOLDER, night_t)
-        night_tmpl = None
-        if os.path.exists(night_path):
-            try:
-                night_tmpl = cv2.imread(night_path, 0)
-                self.log(f"  夜テンプレート読み込み成功: {night_tmpl.shape if night_tmpl is not None else 'N/A'}")
-            except Exception as e:
-                self.log(f"エラー: 夜テンプレート読み込み失敗 - {e}")
-
         # 昼を判定
         day_score = 0.0
-        if day_tmpl is not None:
+        if day_loaded and day_tmpl is not None:
             try:
                 res_day = cv2.matchTemplate(gray, day_tmpl, cv2.TM_CCOEFF_NORMED)
                 _, day_score, _, _ = cv2.minMaxLoc(res_day)
@@ -125,7 +130,7 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
 
         # 夜を判定
         night_score = 0.0
-        if night_tmpl is not None:
+        if night_loaded and night_tmpl is not None:
             try:
                 res_night = cv2.matchTemplate(gray, night_tmpl, cv2.TM_CCOEFF_NORMED)
                 _, night_score, _, _ = cv2.minMaxLoc(res_night)
@@ -135,7 +140,7 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
 
         # より高いスコアの方を現在の時間帯とする
         self.log(f"判定結果: 昼={day_score:.3f}, 夜={night_score:.3f}")
-        
+
         if day_score >= night_score:
             self.log("★★★ 昼と判定しました")
             return "day"
@@ -241,48 +246,18 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
         return True
 
     def do(self):
-        self.log("=== ZA 昼夜切り替え確認スクリプト 開始 ===")
+        self.log("=== ZA イベールセンター移動 + 時間帯確認スクリプト 開始 ===")
 
-        # 1. 現在時刻を表示
-        now = datetime.now()
-        current_hour = now.hour
-        self.log(f"現在時刻: {now.strftime('%H:%M:%S')}")
+        # 1. イベールセンターへ移動して椅子に座る
+        self.move_to_ibeeru_center()
 
-        # 2. 昼夜判定（6:00-18:00は昼、それ以外は夜）
-        target_time = "day" if 6 <= current_hour < 18 else "night"
-        self.log(f"判定結果: {'昼' if target_time=='day' else '夜'} を目標にします")
+        # 2. 時間帯を確認
+        self.log("現在の時間帯を確認中...")
+        current_time = self.check_current_time()
 
-        # 3. 切り替え前の現在時間帯を確認
-        self.log("【切り替え前】現在の時間帯を確認中...")
-        before_time = self.check_current_time()
-        if before_time:
-            self.log(f"切り替え前: {'昼' if before_time=='day' else '夜'}")
-            if before_time == target_time:
-                self.log("既に目標の時間帯です。変更不要です。")
-                self.log("=== 操作完了 ===")
-                self.finish()
-                return
-        else:
-            self.log("時間帯の判定に失敗しました。")
-
-        # 4. イベールセンターへ移動して椅子に座る（この時点で時間が変わる）
-        self.log("イベールセンターへ移動して座ります（自動的に時間が変わります）...")
-        if not self.move_to_ibeeru_center():
-            self.log("移動に失敗しました")
-            self.log("=== 操作完了 ===")
-            self.finish()
-            return
-
-        # 5. 移動後に少し待機してから時間帯を確認
-        self.log("【切り替え後】現在の時間帯を確認中...")
-        self.wait(2.0)
-        after_time = self.check_current_time()
-        if after_time:
-            self.log(f"切り替え後: {'昼' if after_time=='day' else '夜'}")
-            if after_time == target_time:
-                self.log("★★★ 時間変更成功！ ★★★")
-            else:
-                self.log("⚠️ 時間帯が目標と異なります")
+        if current_time:
+            time_str = "昼" if current_time == "day" else "夜"
+            self.log(f"★★★ ゲーム内時間帯: {time_str} ★★★")
         else:
             self.log("時間帯の判定に失敗しました")
 

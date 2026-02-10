@@ -1140,7 +1140,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.log(f"【昼夜切り替え】目標: {'昼' if target_time=='day' else '夜'}")
         if not self.move_to_ibeeru_center(): return False
         self.wait(2.0)
-        self.log("イベールセンター移動完了")
+        self.log("イベールセンター移動完了")1   
         return True
 
     def move_to_ibeeru_center(self):
@@ -1158,9 +1158,9 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.wait(4.0)
         self.press(Direction.LEFT, 0.65, 0.5)
         self.press(Direction.UP, 0.25, 0.5)
-        for _ in range(6): self.press(Button.A, 0.1, 0.5)
+        for _ in range(6): self.press(Button.A, 0.1, 0.2)
         self.wait(15.0)
-        for _ in range(6): self.press(Button.B, 0.1, 0.1)
+        for _ in range(6): self.press(Button.B, 0.1, 0.2)
         self.log("イベールセンター着席完了")
         self.wait(2.0)
         return True

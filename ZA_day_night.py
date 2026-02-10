@@ -252,30 +252,37 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
         target_time = "day" if 6 <= current_hour < 18 else "night"
         self.log(f"判定結果: {'昼' if target_time=='day' else '夜'} を目標にします")
 
-        # 3. 現在の時間帯を確認
-        current_time = self.check_current_time()
-        if current_time:
-            self.log(f"現在の時間帯: {'昼' if current_time=='day' else '夜'}")
-            if current_time == target_time:
-                self.log("既に目標の時間帯です。切り替え不要です。")
+        # 3. 切り替え前の現在時間帯を確認
+        self.log("【切り替え前】現在の時間帯を確認中...")
+        before_time = self.check_current_time()
+        if before_time:
+            self.log(f"切り替え前: {'昼' if before_time=='day' else '夜'}")
+            if before_time == target_time:
+                self.log("既に目標の時間帯です。変更不要です。")
                 self.log("=== 操作完了 ===")
                 self.finish()
                 return
         else:
-            self.log("時間帯の判定に失敗しました。切り替えを試みます。")
+            self.log("時間帯の判定に失敗しました。")
 
-        # 4. 昼夜切り替えを実行
-        self.smooth_day_night_change(target_time)
+        # 4. イベールセンターへ移動して椅子に座る（この時点で時間が変わる）
+        self.log("イベールセンターへ移動して座ります（自動的に時間が変わります）...")
+        if not self.move_to_ibeeru_center():
+            self.log("移動に失敗しました")
+            self.log("=== 操作完了 ===")
+            self.finish()
+            return
 
-        # 5. 切り替え後の確認
+        # 5. 移動後に少し待機してから時間帯を確認
+        self.log("【切り替え後】現在の時間帯を確認中...")
         self.wait(2.0)
-        final_time = self.check_current_time()
-        if final_time:
-            self.log(f"切り替え後の時間帯: {'昼' if final_time=='day' else '夜'}")
-            if final_time == target_time:
-                self.log("★★★ 切り替え成功！★★★")
+        after_time = self.check_current_time()
+        if after_time:
+            self.log(f"切り替え後: {'昼' if after_time=='day' else '夜'}")
+            if after_time == target_time:
+                self.log("★★★ 時間変更成功！ ★★★")
             else:
-                self.log("⚠️ 切り替え失敗？目標の時間帯と異なります")
+                self.log("⚠️ 時間帯が目標と異なります")
         else:
             self.log("時間帯の判定に失敗しました")
 

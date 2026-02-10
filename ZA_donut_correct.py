@@ -311,12 +311,6 @@ def load_custom_conditions():
 # カスタム条件を読み込み
 CUSTOM_CONDITIONS_DICT = load_custom_conditions() if ENABLE_CUSTOM_CONDITIONS else {'shiny_conditions': [], 'tool_conditions': []}
 
-# 現在のモードに応じた条件を取得
-if 'shiny' in CURRENT_RECIPE['targets']:
-    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('shiny_conditions', [])
-else:
-    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('tool_conditions', [])
-
 
 
 
@@ -360,6 +354,12 @@ if ENV_RECIPE not in valid_recipes:
 # レシピをロードして、現在のレシピデータを保持
 CURRENT_RECIPE = load_recipe(ENV_RECIPE)
 print(f"[System] Recipe loaded: {CURRENT_RECIPE['name']} (targets: {', '.join(CURRENT_RECIPE['targets'])})")
+
+# 現在のモードに応じた条件を取得
+if 'shiny' in CURRENT_RECIPE['targets']:
+    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('shiny_conditions', [])
+else:
+    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('tool_conditions', [])
 
 valid_sizes = ['oyabun', 'big', 'small']
 if SIZE not in valid_sizes:

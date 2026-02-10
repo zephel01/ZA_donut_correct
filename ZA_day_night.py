@@ -46,16 +46,18 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
     def move_to_ibeeru_center(self):
         """イベールセンターへ移動して椅子に座る"""
         self.log("イベールセンターへ移動")
-        self.press(Button.PLUS, 0.2); self.wait(3.5)
-        self.press(Button.Y, 0.1); self.wait(1.2)
-        self.press(Button.MINUS, 0.1); self.wait(0.9)
+        self.press(Button.PLUS, 0.2, 0.5)
+        self.wait(1.0)
+        self.press(Button.Y, 0.2, 0.4)
+        self.press(Button.MINUS, 0.2, 1.0)
         for _ in range(2): self.press(Hat.BTM, 0.1, 0.25)
-        self.press(Button.A, 0.1); self.wait(1.6)
-        self.press(Hat.TOP, 0.1); self.wait(0.4)
-        self.press(Button.A, 0.1); self.wait(0.8)
-        self.press(Button.A, 0.1); self.wait(FIELD_ENTER_WAIT)
-        self.press(Direction.LEFT, 0.65); self.wait(0.5)
-        self.press(Direction.UP, 0.25); self.wait(0.5)
+        self.press(Button.A, 0.2, 0.5)
+        self.press(Hat.TOP, 0.2, 0.5)
+        self.press(Button.A, 0.2, 0.5)
+        self.press(Button.A, 0.2, 0.5)
+        self.wait(FIELD_ENTER_WAIT)
+        self.press(Direction.LEFT, 0.65, 0.5)
+        self.press(Direction.UP, 0.25, 0.5)
         for _ in range(6): self.press(Button.A, 0.1, 0.5)
         self.wait(3.0)
         for _ in range(6): self.press(Button.B, 0.1, 0.1)
@@ -68,37 +70,77 @@ class ZA_DayNightCheck(ImageProcPythonCommand):
         night_t = 'LegendsZA/time_night.png'
 
         self.log("現在の時間帯を確認中...")
-        frame = self.camera.readFrame()
+
+        # カメラフレーム取得（リトライ付き）
+        max_retries = 5
+        frame = None
+        for retry in range(max_retries):
+            frame = self.camera.readFrame()
+            if frame is not None:
+                break
+            self.log(f"フレーム取得リトライ {retry + 1}/{max_retries}")
+            time.sleep(0.5)
+
         if frame is None:
             self.log("エラー: 画面取得不可")
             return None
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        try:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        except Exception as e:
+            self.log(f"エラー: 画像変換失敗 - {e}")
+            return None
 
         # 昼のテンプレートを確認
         day_path = os.path.join(self.FOLDER, day_t)
-        day_tmpl = cv2.imread(day_path, 0) if os.path.exists(day_path) else None
+        day_tmpl = None
+        if os.path.exists(day_path):
+            try:
+                day_tmpl = cv2.imread(day_path, 0)
+            except Exception as e:
+                self.log(f"エラー: 昼テンプレート読み込み失敗 - {e}")
 
         # 夜のテンプレートを確認
         night_path = os.path.join(self.FOLDER, night_t)
-        night_tmpl = cv2.imread(night_path, 0) if os.path.exists(night_path) else None
+        night_tmpl = None
+        if os.path.exists(night_path):
+            try:
+                night_tmpl = cv2.imread(night_path, 0)
+            except Exception as e:
+                self.log(f"エラー: 夜テンプレート読み込み失敗 - {e}")
 
+        # 昼を判定
+        day_score = 0.0
         if day_tmpl is not None:
-            res_day = cv2.matchTemplate(gray, day_tmpl, cv2.TM_CCOEFF_NORMED)
-            _, day_score, _, _ = cv2.minMaxLoc(res_day)
-            self.log(f"昼スコア: {day_score:.3f}")
-            if day_score >= 0.98:
-                return "day"
+            try:
+                res_day = cv2.matchTemplate(gray, day_tmpl, cv2.TM_CCOEFF_NORMED)
+                _, day_score, _, _ = cv2.minMaxLoc(res_day)
+                self.log(f"昼スコア: {day_score:.3f}")
+            except Exception as e:
+                self.log(f"エラー: 昼判定失敗 - {e}")
 
+        # 夜を判定
+        night_score = 0.0
         if night_tmpl is not None:
-            res_night = cv2.matchTemplate(gray, night_tmpl, cv2.TM_CCOEFF_NORMED)
-            _, night_score, _, _ = cv2.minMaxLoc(res_night)
-            self.log(f"夜スコア: {night_score:.3f}")
-            if night_score >= 0.98:
-                return "night"
+            try:
+                res_night = cv2.matchTemplate(gray, night_tmpl, cv2.TM_CCOEFF_NORMED)
+                _, night_score, _, _ = cv2.minMaxLoc(res_night)
+                self.log(f"夜スコア: {night_score:.3f}")
+            except Exception as e:
+                self.log(f"エラー: 夜判定失敗 - {e}")
 
-        self.log("時間帯が判定できませんでした")
-        return None
+        # より高いスコアの方を現在の時間帯とする
+        self.log(f"判定結果: 昼={day_score:.3f}, 夜={night_score:.3f}")
+        
+        if day_score >= night_score:
+            self.log("★★★ 昼と判定しました")
+            return "day"
+        elif night_score > day_score:
+            self.log("★★★ 夜と判定しました")
+            return "night"
+        else:
+            self.log("⚠️ 判定不能（スコアが同じか、両方0.0）")
+            return None
 
     def smooth_day_night_change(self, target_time):
         """昼夜切り替えを実行"""

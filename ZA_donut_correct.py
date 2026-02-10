@@ -1165,7 +1165,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         self.press(Button.A, 0.1); self.wait(1.6)
         self.press(Hat.TOP, 0.1); self.wait(0.4)
         self.press(Button.A, 0.1); self.wait(0.8)
-        self.press(Button.A, 0.1); self.wait(FIELD_ENTER_WAIT)
+        self.press(Button.A, 0.1); self.wait(self.FIELD_ENTER_WAIT)
         self.press(Direction.LEFT, 0.65); self.wait(0.5)
         self.press(Direction.UP, 0.25); self.wait(0.5)
         for _ in range(6): self.press(Button.A, 0.1, 0.5)

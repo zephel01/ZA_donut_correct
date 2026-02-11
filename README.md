@@ -146,226 +146,42 @@ NO_MATCH_TIMEOUT_SECONDS=0 python ZA_donut_correct.py
 - `SETTING_NO_MATCH_TIMEOUT_SECONDS = 60`
   - 連続で60秒間マッチしない場合、backup restartから再開
 - `SETTING_NO_MATCH_TIMEOUT_SECONDS = 0`
-  - 機能が無効化され、通常動作（backup restartはリトライ失敗時のみ実行）
-
+   - 機能が無効化され、通常動作（backup restartはリトライ失敗時のみ実行）
 
 ### 5. カスタム条件機能
- 外部ファイル（`donut_conditions.json`）から任意の条件を定義し、その条件に一致するドーナツが出現した場合に自動的に終了する機能です。
- 
- **対応するパワーテンプレート（5種類）:**
- | テンプレート | type | 説明 |
- |-------------|------|------|
- | かがやきパワー | `shiny` | `attribute`でタイプを指定、`null`でタイプ不問 |
- | サイズ | `size` | `size`で`oyabun`/`big`/`small`を指定 |
- | ほかくパワー | `capture` | `attribute`でタイプを指定、`null`でタイプ不問 |
- | どうぐパワー | `tool` | `class`で`kinomi`/`ball`/`coin`等を指定 |
- | どっさりパワー | `dosari` | どっさりパワー（引数なし） |
- 
- **モード別の条件:**
- - **shinyモード時**:
-   - かがやきパワー × サイズパワーの組み合わせを狙う
-   - オヤブンLv3 × かがやき(特定タイプ)Lv3
-   - でかでかLv3 × かがやき(特定タイプ)Lv3
-   - ちびちびLv3 × かがやき(特定タイプ)Lv3
-   - かがやきパワー × サイズ × ほかくパワー（3パワー構造）
- 
- - **toolモード時**:
-   - どうぐパワー × どっさりパワーの組み合わせを狙う
-   - どっさりLv3 × どうぐ(きのみ/ボール)Lv3
- 
- **条件の定義方法:**
- `donut_conditions.json` ファイルを編集することで、モードごとに条件を定義できます。
- 
- ```json
- {
-   "shiny_conditions": [
-     {
-       "name": "オヤブン×かがやき",
-       "power1": {
-         "type": "shiny",
-         "attribute": null,
-         "min_level": 3
-       },
-       "power2": {
-         "type": "size",
-         "size": "oyabun",
-         "min_level": 3
-       },
-       "enabled": true
-     }
-   ],
-   "tool_conditions": [
-     {
-       "name": "どっさり×どうぐ(きのみ)",
-       "power1": {
-         "type": "tool",
-         "class": "kinomi",
-         "min_level": 3
-       },
-       "power2": {
-         "type": "dosari",
-         "min_level": 3
-       },
-       "enabled": true
-     }
-   ]
- }
- ```
- 
- **有効化方法:**
- ```python
- SETTING_USE_CUSTOM_CONDITIONS = True
- ```
- 
- **3パワー構造（power3を使用する場合）:**
- カスタム条件では最大3つのパワーを指定できます。
- 
- ```json
- {
-   "name": "かがやき＋サイズ＋ほかく（3パワー）",
-   "power1": {
-     "type": "shiny",
-     "attribute": null,
-     "min_level": 3
-   },
-   "power2": {
-     "type": "size",
-     "size": "small",
-     "min_level": 3
-   },
-   "power3": {
-     "type": "capture",
-     "attribute": null,
-     "min_level": 1
-   },
-   "enabled": false
- }
- ```
- 
- **設定例:**
- 
- 例1: かがやきパワー(Fire)Lv3 × オヤブンLv3 を狙う場合
- ```json
- {
-   "shiny_conditions": [
-     {
-       "name": "かがやき(Fire)Lv3 × オヤブンLv3",
-       "power1": {
-         "type": "shiny",
-         "attribute": "Fire",
-         "min_level": 3
-       },
-       "power2": {
-         "type": "size",
-         "size": "oyabun",
-         "min_level": 3
-       },
-       "enabled": true
-     }
-   ],
-   "tool_conditions": []
- }
- ```
- 
- 例2: かがやきパワー(Fire/Ground)Lv3 × オヤブンLv3 を狙う場合（複数タイプ指定）
- ```json
- {
-   "shiny_conditions": [
-     {
-       "name": "かがやき(Fire/Ground)Lv3 × オヤブンLv3",
-       "power1": {
-         "type": "shiny",
-         "attribute": ["Fire", "Ground"],
-         "min_level": 3
-       },
-       "power2": {
-         "type": "size",
-         "size": "oyabun",
-         "min_level": 3
-       },
-       "enabled": true
-     }
-   ],
-   "tool_conditions": []
- }
- ```
- 
- 例3: すべてのかがやきパワーLv3 × すべてのサイズLv3 を狙う場合
- ```json
- {
-   "shiny_conditions": [
-     {
-       "name": "オヤブン×かがやき",
-       "power1": { "type": "shiny", "attribute": null, "min_level": 3 },
-       "power2": { "type": "size", "size": "oyabun", "min_level": 3 },
-       "enabled": true
-     },
-     {
-       "name": "でかでか×かがやき",
-       "power1": { "type": "shiny", "attribute": null, "min_level": 3 },
-       "power2": { "type": "size", "size": "big", "min_level": 3 },
-       "enabled": true
-     },
-     {
-       "name": "ちびちび×かがやき",
-       "power1": { "type": "shiny", "attribute": null, "min_level": 3 },
-       "power2": { "type": "size", "size": "small", "min_level": 3 },
-       "enabled": true
-     }
-   ],
-   "tool_conditions": []
- }
- ```
- 
- 例4: かがやきパワー × サイズ × ほかくパワー（3パワー）を狙う場合
- ```json
- {
-   "shiny_conditions": [
-     {
-       "name": "かがやき＋サイズ＋ほかく（3パワー）",
-       "power1": {
-         "type": "shiny",
-         "attribute": null,
-         "min_level": 3
-       },
-       "power2": {
-         "type": "size",
-         "size": "small",
-         "min_level": 3
-       },
-       "power3": {
-         "type": "capture",
-         "attribute": null,
-         "min_level": 1
-       },
-       "enabled": true
-     }
-   ],
-   "tool_conditions": []
- }
- ```
- 
- 例5: どっさりLv3 × どうぐ(きのみ)Lv3 を狙う場合
- ```json
- {
-   "shiny_conditions": [],
-   "tool_conditions": [
-     {
-       "name": "どっさり×どうぐ(きのみ)",
-       "power1": { "type": "tool", "class": "kinomi", "min_level": 3 },
-       "power2": { "type": "dosari", "min_level": 3 },
-       "enabled": true
-     }
-   ]
- }
- ```
- 
- ### 5. 知能的なエラーリカバリ
- - **自動エリア判定 & 移動**: マクロ開始時にピクニックメニューからエリアを判定し、メディオプラザ外であれば自動的に正しい場所へ移動して再開します。
- - **動的待機**: 固定秒数の待機ではなく、画面の画像認識によって結果画面を検知し、最適なタイミングで次の操作に移ります。
- - **リトライ機能**: 作成に失敗（焦げた等）した場合、自動的にレシピ入力からやり直します。
- 
- ### 6. デバッグ・可視化
+
+外部ファイル（`donut_conditions.json`）から任意の条件を定義し、その条件に一致するドーナツが出現した場合に自動的に終了する機能です。
+
+**詳細な使い方は `USER_CONDITIONS_GUIDE.md` を参照してください。**
+
+**対応するパワーテンプレート（5種類）:**
+| テンプレート | type | 説明 |
+|-------------|------|------|
+| かがやきパワー | `shiny` | `attribute`でタイプを指定、`null`でタイプ不問 |
+| サイズ | `size` | `size`で`oyabun`/`big`/`small`を指定 |
+| ほかくパワー | `capture` | `attribute`でタイプを指定、`null`でタイプ不問 |
+| どうぐパワー | `tool` | `class`で`kinomi`/`ball`/`coin`等を指定 |
+| どっさりパワー | `dosari` | どっさりパワー（引数なし） |
+
+**有効化方法:**
+```python
+SETTING_USE_CUSTOM_CONDITIONS = True
+```
+
+または `config.json` で:
+```json
+{
+  "use_custom_conditions": true,
+  "conditions_file": "donut_conditions.json"
+}
+```
+
+### 6. 知能的なエラーリカバリ
+  - **自動エリア判定 & 移動**: マクロ開始時にピクニックメニューからエリアを判定し、メディオプラザ外であれば自動的に正しい場所へ移動して再開します。
+  - **動的待機**: 固定秒数の待機ではなく、画面の画像認識によって結果画面を検知し、最適なタイミングで次の操作に移ります。
+  - **リトライ機能**: 作成に失敗（焦げた等）した場合、自動的にレシピ入力からやり直します。
+
+### 7. デバッグ・可視化
  - **進行ログの可視化**: どのボタンを何秒押したか、現在のステップがどこかをリアルタイムでログ出力します。
  - **判定スコアの表示**: 画像認識の類似度スコアを表示し、閾値の調整を容易にします。
  

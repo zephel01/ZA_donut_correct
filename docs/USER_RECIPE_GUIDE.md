@@ -20,7 +20,7 @@
  ### 新しいレシピを追加する場合
  
  1. `recipes/my_new_recipe.py` を作成
- 2. 設定ファイルで `SETTING_RECIPE = 'my_new_recipe'` を指定
+ 2. `config.json` で `"recipe": "my_new_recipe"` を指定
  3. プログラム起動時に自動で検出・使用される
  
  ## 作成手順
@@ -39,6 +39,7 @@
  
  NAME = "カスタムレシピ名"
  CATEGORY = "custom"  # shiny, tool, rainbow, custom など
+ TARGETS = ['tool']   # 必須。['shiny'] = 色違いモード / ['tool'] = どうぐパワーモード
  
  STEPS = [
      # ステップ1: カーソル移動（上）
@@ -55,10 +56,12 @@
  python ZA_donut_correct.py
  ```
  
- 設定ファイル（ZA_donut_correct.py）で以下を設定:
+ `config.json` で以下を設定:
  
- ```python
- SETTING_RECIPE = 'my_custom_recipe'
+ ```json
+ {
+   "recipe": "my_custom_recipe"
+ }
  ```
  
  または、環境変数で指定:
@@ -131,15 +134,13 @@
  
  **動作**:
  - 色違いモードで動作
- - `SETTING_TYPE`（例: 'Ghost', 'Dark'）を参照
- - `SETTING_SIZE`（例: 'small'）を参照
+ - config.json の `type`（例: `"Ghost, Dark"`）を参照
+ - config.json の `size`（例: `"small"`）を参照
  - 色違い判定を行う
  
  **設定例**:
- ```python
- SETTING_RECIPE = 'shiny1'
- SETTING_TYPE = 'Ghost'
- SETTING_SIZE = 'small'
+ ```json
+ { "recipe": "shiny1", "type": "Ghost", "size": "small" }
  ```
  
  #### 例2: recipe1 レシピ（どうぐパワーモード）
@@ -151,13 +152,12 @@
  
  **動作**:
  - どうぐパワーモードで動作
- - `SETTING_ITEM_CLASS`（例: 'kinomi', 'ball'）を参照
+ - config.json の `item_class`（例: `"kinomi"`, `"ball"`）を参照
  - どうぐパワー判定を行う
  
  **設定例**:
- ```python
- SETTING_RECIPE = 'recipe1'
- SETTING_ITEM_CLASS = 'kinomi'
+ ```json
+ { "recipe": "recipe1", "item_class": "kinomi" }
  ```
  
  #### 例3: rainbow1 レシピ（どうぐパワーモード）
@@ -170,9 +170,8 @@
  **動作**: どうぐパワーモード
  
  **設定例**:
- ```python
- SETTING_RECIPE = 'rainbow1'
- SETTING_ITEM_CLASS = 'kinomi'
+ ```json
+ { "recipe": "rainbow1", "item_class": "kinomi" }
  ```
  
  ### rainbow レシピについて
@@ -355,4 +354,8 @@
 2. 相手は `recipes/` ディレクトリに配置
 3. プログラム実行時にレシピ名を指定
 
+## 関連ドキュメント
 
+- [USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md) - config.json の全設定項目
+- [RECIPES_LIST.md](RECIPES_LIST.md) - 同梱レシピの一覧と操作内容
+- [README.md](README.md) - ドキュメント一覧

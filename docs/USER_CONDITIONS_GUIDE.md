@@ -4,7 +4,7 @@
 
 外部ファイル（`donut_conditions.json`）から任意の条件を定義し、その条件に一致するドーナツが出現した場合に自動的に終了する機能です。
 
-**注意:** 詳細な設定は `USER_CONFIG_GUIDE.md` も参照してください。
+**注意:** 詳細な設定は [USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md) も参照してください。
 
 ---
 
@@ -288,12 +288,15 @@ Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground, Flying, Psy
 }
 ```
 
-### ZA_donut_correct.py で設定する場合
+### 環境変数で上書きする場合
 
-```python
-SETTING_USE_CUSTOM_CONDITIONS = True
-SETTING_CONDITIONS_FILE = "donut_conditions.json"
+```bash
+export USE_CUSTOM_CONDITIONS=true
+export CONDITIONS_FILE=donut_conditions.json
 ```
+
+> v2.0.0 以降、`ZA_donut_correct.py` 内の `SETTING_*` 変数は config.json から自動で代入されます。ソースを直接書き換える必要はありません。
+> `conditions_file` は `ZA_donut_correct.py` と同じフォルダを基準とした相対パスで解決されます（`docs/` 基準ではありません）。
 
 ---
 
@@ -444,6 +447,7 @@ SETTING_CONDITIONS_FILE = "donut_conditions.json"
 
 ## 関連ドキュメント
 
-- `USER_CONFIG_GUIDE.md` - カスタム条件の有効化設定や環境変数について
-- `USER_RECIPE_GUIDE.md` - レシピの作成方法について
-- `README.md` - メインの使用方法について
+- [USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md) - カスタム条件の有効化設定や環境変数について
+- [USER_RECIPE_GUIDE.md](USER_RECIPE_GUIDE.md) - レシピの作成方法について
+- [README.md](../README.md) - メインの使用方法について
+- [docs/README.md](README.md) - ドキュメント一覧

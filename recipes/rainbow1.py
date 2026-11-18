@@ -1,11 +1,9 @@
-# バコウ1,ウタン1,ナモ4,ロゼル2
+# レインボードーナツ どうぐパワー バコウ1,ウタン1,ナモ4,ロゼル2
 from Commands.Keys import Button, Hat
 
-NAME = "バコウ1,ウタン1,ナモ4,ロゼル2"
+NAME = "レインボードーナツ どうぐパワー"
 CATEGORY = "rainbow"
-# TARGETS = ['shiny']  # 対象: 色違い（色違いの方がパワーが強い場合）
-# TARGETS = ['tool']   # 対象: どうぐパワー（どうぐパワーの方がパワーが強い場合）
-TARGETS = ['tool']  # デフォルト: どうぐパワー
+TARGETS = ['tool']  
 
 STEPS = [
     {'action': 'pressRep', 'type': Hat.TOP, 'repeat': 1, 'duration': 0.05, 'interval': 0.1},

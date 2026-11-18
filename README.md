@@ -2,6 +2,10 @@
 
   Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパワーやサイズを厳選するためのマクロです。
 
+  **動作環境:** Poke-Controller Modified Extension 上で動作します。
+
+  **マニュアル一覧:** [docs/README.md](docs/README.md)
+
 ## フォルダ構成
 
   ```
@@ -27,10 +31,18 @@
                   │   ├── rainbow3.py
                   │   └── template.py
                   ├── ZA_donut_correct.py  # 本体プログラム
+                  ├── ZA_backupRestart.py  # 補助: リセット＆復帰のみ
+                  ├── ZA_day_night.py      # 補助: イベールセンター移動＋時間帯確認
                   ├── config.json          # 設定ファイル（v2.0.0で追加）
                   ├── donut_conditions.json # カスタム条件ファイル
-                  ├── USER_CONFIG_GUIDE.md # 設定ガイド（v2.0.0で追加）
-                  ├── USER_RECIPE_GUIDE.md  # ユーザー独自レシピ作成ガイド
+                  ├── docs/                # マニュアル
+                  │   ├── README.md                # ドキュメント一覧
+                  │   ├── USER_CONFIG_GUIDE.md     # 設定ガイド（config.json）
+                  │   ├── USER_RECIPE_GUIDE.md     # 独自レシピ作成ガイド
+                  │   ├── USER_CONDITIONS_GUIDE.md # カスタム条件ガイド
+                  │   ├── RECIPES_LIST.md          # 同梱レシピ一覧
+                  │   ├── IMAGE_TEMPLATES.md       # 画像テンプレート一覧
+                  │   └── SCRIPTS_GUIDE.md         # 補助スクリプトガイド
                   └── README.md            # このファイル
   ```
  
@@ -47,8 +59,10 @@
              └── ZA_donut_correct\
                  ├── LegendsZA\
                  ├── recipes\
+                 ├── docs\
                  ├── ZA_donut_correct.py
-                 ├── USER_RECIPE_GUIDE.md
+                 ├── config.json
+                 ├── donut_conditions.json
                  └── README.md
  ```
  
@@ -61,13 +75,13 @@
   全ての設定を `config.json` で管理できるようになりました。
   - **メインロジック保護**: `ZA_donut_correct.py` を更新しても設定値が上書きされない
   - **一元管理**: 全設定項目を単一のJSONファイルで管理
-  - **詳細は `USER_CONFIG_GUIDE.md` を参照**
+  - **詳細は [docs/USER_CONFIG_GUIDE.md](docs/USER_CONFIG_GUIDE.md) を参照**
 
   ### 1. レシピ外部ファイル化機能 (v1.9.0)
   レシピを外部ファイル（`recipes/` ディレクトリ内の `.py` ファイル）から読み込むことができます。
   - **ユーザー独自レシピ**: `recipes/template.py` をコピーして独自のレシピを作成可能
   - **自動的レシピ検出**: `recipes/` ディレクトリ内の `.py` ファイルを自動検出
-  - **詳細は `USER_RECIPE_GUIDE.md` を参照**
+  - **詳細は [docs/USER_RECIPE_GUIDE.md](docs/USER_RECIPE_GUIDE.md) を参照**
 
   ### 2. 昼夜切り替え機能 (v2.0.0)
   指定した時間間隔で自動的に昼夜を切り替える機能です。
@@ -93,12 +107,12 @@
   - 最大ループ回数を設定可能
   - 目標達成回数が最大回数に達すると終了します
 
-**設定項目:**
-```python
-# 目標達成後に再度ドーナツ作成を行うモード（True/False）
-SETTING_ENABLE_LOOP_AFTER_SUCCESS = False
-# 目標達成後の最大ループ回数
-SETTING_LOOP_AFTER_SUCCESS_MAX = 1
+**設定項目（config.json）:**
+```json
+{
+  "enable_loop_after_success": false,
+  "loop_after_success_max": 1
+}
 ```
 
 **環境変数で指定する場合:**
@@ -113,9 +127,9 @@ python ZA_donut_correct.py
 ```
 
 **動作例:**
-- `SETTING_ENABLE_LOOP_AFTER_SUCCESS = False` または `LOOP_AFTER_SUCCESS_MAX = 1`
+- `enable_loop_after_success: false` または `loop_after_success_max: 1`
   - 1回クリアして終了
-- `SETTING_ENABLE_LOOP_AFTER_SUCCESS = True` 且つ `LOOP_AFTER_SUCCESS_MAX = 3`
+- `enable_loop_after_success: true` 且つ `loop_after_success_max: 3`
   - 1回クリア → ポケモンセンターへ移動してセーブ → 再開
   - 2回クリア → ポケモンセンターへ移動してセーブ → 再開
   - 3回クリア → 終了
@@ -126,11 +140,11 @@ python ZA_donut_correct.py
 - 設定で有効/無効を切り替え可能
 - 0秒に設定すると機能が無効化されます
 
-**設定項目:**
-```python
-# 連続マッチなし時のバックアップ再開設定
-# ドーナツの画像比較で指定秒数以上連続して引っかからない状態が続いたら、backup restartから再開する
-SETTING_NO_MATCH_TIMEOUT_SECONDS = 60
+**設定項目（config.json）:**
+```json
+{
+  "no_match_timeout_seconds": 60
+}
 ```
 
 **環境変数で指定する場合:**
@@ -143,16 +157,16 @@ NO_MATCH_TIMEOUT_SECONDS=0 python ZA_donut_correct.py
 ```
 
 **動作例:**
-- `SETTING_NO_MATCH_TIMEOUT_SECONDS = 60`
+- `no_match_timeout_seconds: 60`
   - 連続で60秒間マッチしない場合、backup restartから再開
-- `SETTING_NO_MATCH_TIMEOUT_SECONDS = 0`
+- `no_match_timeout_seconds: 0`
    - 機能が無効化され、通常動作（backup restartはリトライ失敗時のみ実行）
 
 ### 5. カスタム条件機能
 
 外部ファイル（`donut_conditions.json`）から任意の条件を定義し、その条件に一致するドーナツが出現した場合に自動的に終了する機能です。
 
-**詳細な使い方は `USER_CONDITIONS_GUIDE.md` を参照してください。**
+**詳細な使い方は [docs/USER_CONDITIONS_GUIDE.md](docs/USER_CONDITIONS_GUIDE.md) を参照してください。**
 
 **対応するパワーテンプレート（5種類）:**
 | テンプレート | type | 説明 |
@@ -163,12 +177,7 @@ NO_MATCH_TIMEOUT_SECONDS=0 python ZA_donut_correct.py
 | どうぐパワー | `tool` | `class`で`kinomi`/`ball`/`coin`等を指定 |
 | どっさりパワー | `dosari` | どっさりパワー（引数なし） |
 
-**有効化方法:**
-```python
-SETTING_USE_CUSTOM_CONDITIONS = True
-```
-
-または `config.json` で:
+**有効化方法（config.json）:**
 ```json
 {
   "use_custom_conditions": true,
@@ -204,7 +213,7 @@ SETTING_USE_CUSTOM_CONDITIONS = True
   - `no_match_timeout_seconds`: 連続マッチなし時のバックアップ再開秒数
   - など...
 
-  **詳細な設定項目と選択肢:** `USER_CONFIG_GUIDE.md` を参照してください。
+  **詳細な設定項目と選択肢:** [docs/USER_CONFIG_GUIDE.md](docs/USER_CONFIG_GUIDE.md) を参照してください。
 
   ### 環境変数による設定（上書き）
 
@@ -232,9 +241,9 @@ SETTING_USE_CUSTOM_CONDITIONS = True
  
  | 設定項目 | 説明 | デフォルト |
  |-----------|------|-----------|
- | `SETTING_ENABLE_CAPTURE_POWER` | ほかくパワー検知を有効にするか | `False` |
- | `SETTING_LEVEL_CAPTURE` | ほかくパワーの目標レベル（1=妥協/2/3=厳選） | `1` |
- | `SETTING_CAPTURE_COMPROMISE` | ほかくパワー妥協オプション | `True` |
+ | `enable_capture_power` | ほかくパワー検知を有効にするか | `false` |
+ | `level_capture` | ほかくパワーの目標レベル（1=妥協/2/3=厳選） | `1` |
+ | `capture_compromise` | ほかくパワー妥協オプション | `true` |
  
  **環境変数で指定する場合:**
  ```bash
@@ -247,8 +256,8 @@ SETTING_USE_CUSTOM_CONDITIONS = True
  
  | 設定項目 | 説明 | デフォルト |
  |-----------|------|-----------|
- | `SETTING_USE_CUSTOM_CONDITIONS` | カスタム条件機能を有効にするか（True/False） | `False` |
- | `SETTING_CONDITIONS_FILE` | 条件ファイルのパス | `donut_conditions.json` |
+ | `use_custom_conditions` | カスタム条件機能を有効にするか（true/false） | `false` |
+ | `conditions_file` | 条件ファイルのパス | `donut_conditions.json` |
  
  **環境変数で指定する場合:**
  ```bash
@@ -281,8 +290,8 @@ SETTING_USE_CUSTOM_CONDITIONS = True
  | `shiny4` | 色違い厳選（最新版）           | ほかくパワー付与レシピの改良版 |
  
  使用例:
- ```python
- SETTING_RECIPE = 'shiny1'  # 色違い厳選をしたい場合
+ ```json
+ { "recipe": "shiny1" }
  ```
  
  ##### どうぐパワーを集めたい場合
@@ -294,8 +303,8 @@ SETTING_USE_CUSTOM_CONDITIONS = True
  | `recipe3` | 節約レシピ3                  | 別の素材組み合わせ     |
  
  使用例:
- ```python
- SETTING_RECIPE = 'recipe1'  # どうぐパワーを集めたい場合
+ ```json
+ { "recipe": "recipe1" }
  ```
  
  ##### 特定の素材組み合わせを使いたい場合（rainbow）
@@ -310,17 +319,17 @@ SETTING_USE_CUSTOM_CONDITIONS = True
  - `TARGETS = ['tool']`（デフォルト）となっており、どうぐパワーモードで動作します。
  
  使用例:
- ```python
- SETTING_RECIPE = 'rainbow1'  # 特定の素材組み合わせでどうぐパワーを集めたい場合
+ ```json
+ { "recipe": "rainbow1" }
  ```
  
  #### ユーザー独自レシピの作成手順
  
  1. `recipes/template.py` をコピーして名前を変更（例: `my_recipe.py`）
  2. `NAME`, `CATEGORY`, `TARGETS`, `STEPS` を編集
- 3. `SETTING_RECIPE = 'my_recipe'` で指定
+ 3. config.json で `"recipe": "my_recipe"` を指定
  
- 詳細は `USER_RECIPE_GUIDE.md` を参照してください。
+ 詳細は [docs/USER_RECIPE_GUIDE.md](docs/USER_RECIPE_GUIDE.md) を参照してください。
  
    ## 更新履歴
 

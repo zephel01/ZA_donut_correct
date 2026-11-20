@@ -125,6 +125,8 @@
 **対応タイプ一覧:**
 Normal, Fire, Water, Grass, Electric, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy
 
+日本語名との対応、`size` / `class` の選択肢は [USER_CONFIG_GUIDE.md の選択肢一覧](USER_CONFIG_GUIDE.md#選択肢一覧) を参照してください。大文字小文字は自動補正されないため、先頭大文字で書いてください。また、ここで使うタイプは `config.json` の `type` にも含めてください（含めないとアイコン画像が読み込まれない場合があります）。
+
 ---
 
 ### 2. サイズパワー (size)

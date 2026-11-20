@@ -1,9 +1,10 @@
-# どうぐパワー重視レシピ/カシブx8
+# サワードーナツ どうぐパワー どっさりパワー/どうぐパワー/メガパワー
+# いじげんカシブのみ8
 from Commands.Keys import Button, Hat
 
-NAME = "どうぐパワー重視レシピ/カシブx8"
-CATEGORY = "tool"
-TARGETS = ['tool']  # 対象: どうぐパワー
+NAME = "サワードーナツ カシブ8"
+CATEGORY = "sour"
+TARGETS = ["tool"]
 
 STEPS = [
     {'action': 'pressRep', 'type': Hat.TOP, 'repeat': 6, 'duration': 0.05, 'interval': 0.1},

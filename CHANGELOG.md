@@ -6,6 +6,17 @@
 
 ## [Unreleased]
 
+### Added
+
+- レシピ `rainbow4`〜`rainbow8`、`sour1`・`sour2`
+
+### Changed
+
+- 同梱レシピを更新。全レシピの先頭にシミュレーター形式のコメント（ドーナツの種類・付く可能性のあるパワー、きのみと数）を記載
+- 全レシピの `NAME` を「ドーナツの種類 きのみと数」に変更（例: `サワードーナツ ロゼル4,カシブ4`）
+- `recipe1` の材料を変更（いじげんロゼル3・リリバ1・カシブ4 → いじげんロゼル4・カシブ4）
+- ドキュメントのレシピ一覧（README、RECIPES_LIST、USER_CONFIG_GUIDE、USER_RECIPE_GUIDE、USER_CONDITIONS_GUIDE）を更新
+
 ## [2.1.0] - 2026-11-20
 
 ### Added

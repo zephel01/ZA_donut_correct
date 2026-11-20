@@ -8,7 +8,7 @@
 
 | ファイル | コマンド名（Poke-Controller 上の表示） | 用途 | config.json の使用 |
 |---|---|---|---|
-| `ZA_donut_correct.py` | `ZA ドーナツ厳選 (…) v2.0.0` | ドーナツ厳選の本体 | ✅ 使う |
+| `ZA_donut_correct.py` | ZA ドーナツ厳選 v<!-- version -->2.1.0<!-- /version --> | ドーナツ厳選の本体 | ✅ 使う |
 | `ZA_backupRestart.py` | `ZA_BackupRestart` | ソフトの終了→再起動→セーブデータ読み込みだけを行う | ❌ 使わない |
 | `ZA_day_night.py` | `ZA_DayNightCheck` | イベールセンターへ移動してベンチに座り、ゲーム内の時間帯を画像で確認する | ❌ 使わない |
 
@@ -133,12 +133,12 @@ class ZA_DonutV188(ImageProcPythonCommand):
 | 版 | NAME | 0.2.0 以降での表示 |
 |---|---|---|
 | v2.0.0 まで | `f"ZA ドーナツ厳選 {CMD_NAME_SUFFIX} v{VERSION}"`（設定でレシピ・タイプが名前に入る） | ❌ 表示されない |
-| v2.1.0 | `"ZA ドーナツ厳選 v2.1.0"` | ✅ |
+| v2.1.0 以降 | `"ZA ドーナツ厳選 vX.Y.Z"`（文字列リテラル） | ✅ |
 
 注意:
 
 - コマンド一覧にレシピやタイプは表示されません。設定は Start 時の設定画面（[USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md#設定画面v210)）か、起動時のログ（`[System] Recipe:` / `[System] Target:`）で確認してください。
-- バージョンは `VERSION = '2.1.0'` と `NAME` の2か所に書かれています。**バージョンを上げるときは両方を書き換えて**ください。ずれていると、読み込み時に `[Warning] NAME (...) と VERSION (...) が合っていません` と表示されます。
+- バージョンは `VERSION` と `NAME` の2か所に書かれています。手で書き換えず、`python tools/bump_version.py <新しいバージョン>` で両方（と README・docs・CHANGELOG）をまとめて更新してください（[README.md](../README.md#バージョンの上げ方開発者向け)）。ずれていると、読み込み時に `[Warning] NAME (...) と VERSION (...) が合っていません` と表示されます。
 - `NAME` を変えると、0.2.0 の使用回数・履歴・ショートカットでは別のコマンドとして扱われます。
 
 ---

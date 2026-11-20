@@ -119,23 +119,27 @@ Poke-Controller は、各スクリプトのクラス変数 `NAME` をコマン�
 |---|---|---|
 | `ZA_backupRestart.py` | `"ZA_BackupRestart"`（文字列リテラル） | ✅ |
 | `ZA_day_night.py` | `"ZA_DayNightCheck"`（文字列リテラル） | ✅ |
-| `ZA_donut_correct.py` | `f"ZA ドーナツ厳選 {CMD_NAME_SUFFIX} v{VERSION}"`（f 文字列） | ⚠️ バージョンによって表示されない |
+| `ZA_donut_correct.py` | `"ZA ドーナツ厳選 v2.1.0"`（文字列リテラル） | ✅（v2.1.0 から） |
 
-**Poke-Controller Modified Extension 0.2.0 以降**の `CommandLoader.py` は、コードを実行せずに構文解析だけで `NAME` を読み取ります。f 文字列のように実行しないと値が決まらない書き方は「not a literal」として無視され、**コマンド一覧に表示されません**。
-
-0.2.0 以降で使う場合は、`ZA_donut_correct.py` の `NAME` を文字列リテラルに書き換えてください。
+**Poke-Controller Modified Extension 0.2.0 以降**の `CommandLoader.py` は、コードを実行せずに構文解析だけで `NAME`（と `TAGS`）を読み取ります。f 文字列や変数のように、実行しないと値が決まらない書き方は「not a literal」として無視され、**コマンド一覧に表示されません**。そのため `NAME` は必ず文字列リテラルで書きます。
 
 ```python
 class ZA_DonutV188(ImageProcPythonCommand):
-    # Poke-Controller Modified Extension 0.2.0 以降は NAME をソースから静的に読むため、文字列リテラルにする
-    # (レシピ・タイプ等の情報は起動時のログに表示)
-    NAME = "ZA ドーナツ厳選 v2.0.0"
+    # PCME 0.2.0 以降は NAME をソースから構文解析だけで読む（実行しない）。
+    # f 文字列や変数を使うと「not a literal」として無視され、コマンド一覧に出なくなるので、必ず文字列リテラルで書く。
+    NAME = "ZA ドーナツ厳選 v2.1.0"
 ```
 
-書き換えた場合の注意:
+| 版 | NAME | 0.2.0 以降での表示 |
+|---|---|---|
+| v2.0.0 まで | `f"ZA ドーナツ厳選 {CMD_NAME_SUFFIX} v{VERSION}"`（設定でレシピ・タイプが名前に入る） | ❌ 表示されない |
+| v2.1.0 | `"ZA ドーナツ厳選 v2.1.0"` | ✅ |
 
-- コマンド一覧にレシピやタイプが表示されなくなります。現在の設定は、起動時のログ（`[System] Recipe:` / `[System] Target:`）で確認してください。
-- バージョンが `VERSION = '2.0.0'` と `NAME` の2か所に書かれることになります。**バージョンを上げるときは両方を更新**してください。
+注意:
+
+- コマンド一覧にレシピやタイプは表示されません。設定は Start 時の設定画面（[USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md#設定画面v210)）か、起動時のログ（`[System] Recipe:` / `[System] Target:`）で確認してください。
+- バージョンは `VERSION = '2.1.0'` と `NAME` の2か所に書かれています。**バージョンを上げるときは両方を書き換えて**ください。ずれていると、読み込み時に `[Warning] NAME (...) と VERSION (...) が合っていません` と表示されます。
+- `NAME` を変えると、0.2.0 の使用回数・履歴・ショートカットでは別のコマンドとして扱われます。
 
 ---
 

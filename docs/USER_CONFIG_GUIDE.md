@@ -1,6 +1,6 @@
 # 設定ガイド（config.json）
 
-対象バージョン: `ZA_donut_correct.py` v2.0.0
+対象バージョン: `ZA_donut_correct.py` v2.1.0
 
 `config.json` は `ZA_donut_correct.py` の動作をすべて決める設定ファイルです。メインロジック（`ZA_donut_correct.py`）を更新しても、設定値は上書きされません。
 
@@ -9,18 +9,19 @@
 ## 目次
 
 1. [クイックスタート](#クイックスタート)
-2. [ファイルの場所と読み込みルール](#ファイルの場所と読み込みルール)
-3. [JSON の書き方の注意](#json-の書き方の注意)
-4. [設定項目一覧](#設定項目一覧)
-5. [選択肢一覧](#選択肢一覧)
-6. [モード別：どの項目が使われるか](#モード別どの項目が使われるか)
-7. [各項目の詳細](#各項目の詳細)
-8. [判定ロジック（成功条件）](#判定ロジック成功条件)
-9. [環境変数による上書き](#環境変数による上書き)
-10. [不正な値を入れたときの挙動](#不正な値を入れたときの挙動)
-11. [既知の問題（v2.0.0）](#既知の問題v200)
-12. [設定例](#設定例)
-13. [トラブルシューティング](#トラブルシューティング)
+2. [設定画面（v2.1.0）](#設定画面v210)
+3. [ファイルの場所と読み込みルール](#ファイルの場所と読み込みルール)
+4. [JSON の書き方の注意](#json-の書き方の注意)
+5. [設定項目一覧](#設定項目一覧)
+6. [選択肢一覧](#選択肢一覧)
+7. [モード別：どの項目が使われるか](#モード別どの項目が使われるか)
+8. [各項目の詳細](#各項目の詳細)
+9. [判定ロジック（成功条件）](#判定ロジック成功条件)
+10. [環境変数による上書き](#環境変数による上書き)
+11. [不正な値を入れたときの挙動](#不正な値を入れたときの挙動)
+12. [既知の問題（v2.0.0）](#既知の問題v200)
+13. [設定例](#設定例)
+14. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
@@ -52,17 +53,71 @@
   "timing_mode": "switch2",
   "enable_capture_power": false,
   "level_capture": 1,
-  "capture_compromise": true
+  "capture_compromise": true,
+  "show_settings_ui": true,
+  "settings_ui_timeout_seconds": 60
 }
 ```
 
-最低限変更が必要なのは次の項目です。
+v2.1.0 では、Start を押すと開く[設定画面](#設定画面v210)で、これらの項目を選べます。config.json を直接書く場合、最低限変更が必要なのは次の項目です。
 
 | やりたいこと | 変更する項目 |
 |---|---|
 | 色違い厳選 | `recipe`（shiny系）, `type`, `size` |
 | どうぐパワー集め | `recipe`（recipe/rainbow系）, `item_class` |
 | Switch 1 / Lite で動かす | `timing_mode: "switch1"` |
+
+---
+
+## 設定画面（v2.1.0）
+
+v2.1.0 から、Poke-Controller で **Start を押すと設定画面が開き、項目を選んでから実行**します。config.json を直接書かなくても、ほとんどの項目を画面で変えられます。
+
+### 使い方
+
+1. コマンド一覧で「ZA ドーナツ厳選 v2.1.0」を選び、Start を押す
+2. 設定画面で、レシピと各タブの項目を選ぶ
+3. 「開始」を押すと、その設定で動き始めます。「キャンセル」（または Esc・ウィンドウを閉じる）なら何もしません
+
+| タブ | 内容 | 対応する項目 |
+|---|---|---|
+| （上） | レシピ（名前とモードを表示） | `recipe` |
+| 狙う条件（色違い） | かがやきのタイプ（複数可。チェックした順に判定）、サイズ、各レベル、ほかくパワー | `type` / `size` / `level_size` / `level_extra` / `enable_capture_power` / `level_capture` / `capture_compromise` |
+| 狙う条件（どうぐ） | どうぐの種類、どっさり・どうぐのレベル | `item_class` / `level_size` / `level_extra` |
+| 回数・リセット | ドーナツを作る最大回数、リトライ回数、目標達成後も続けるか、連続はずれでリセットする秒数、昼夜切り替えの間隔、動作タイミング、デバッグログ | `max_loop` / `retry_limit` / `enable_loop_after_success` / `loop_after_success_max` / `no_match_timeout_seconds` / `day_night_interval` / `timing_mode` / `debug_log` |
+| 認識・カスタム条件 | カスタム条件を使うか、条件ファイル、しきい値 4 つ | `use_custom_conditions` / `conditions_file` / `threshold_*` |
+| この画面 | 次から画面を出すか、自動で開始するまでの秒数 | `show_settings_ui` / `settings_ui_timeout_seconds` |
+
+- タブの中身はレシピのモードで切り替わります（色違いレシピなら、かがやき・サイズ・ほかく。どうぐレシピなら、どうぐ・どっさり）。
+- 「この設定を config.json に保存する」にチェックがあると（初期値はチェックあり）、開始時に config.json へ書き込みます。ファイルにある項目の順番や、画面に無い項目はそのまま残します。チェックを外すと、その回だけ画面の値で動きます。
+- 入力がおかしいとき（数字以外、範囲外、条件ファイルが無いなど）は、メッセージを出して開始しません。
+- 画面の初期値は config.json の値です。**画面から開始したときは、環境変数（`RECIPE` など）より画面の値が優先**されます。環境変数が設定されていると、画面に注意が出ます。
+
+### 自動で開始（予約・モニターから開始したとき）
+
+画面を開いたまま `settings_ui_timeout_seconds` 秒（初期値 60 秒）何も操作しないと、表示している設定で自動的に開始します。Poke-Controller-Modified-Extension 0.2.0 の「開始と停止の予約」やモニターの All Start など、PC の前に人がいないときでも止まらないようにするためです。画面をクリックしたりキーを押したりすると、自動で開始するのを止めます。`0` にすると自動では開始しません。
+
+### 画面を出さずに開始する場合
+
+| 状況 | 動き |
+|---|---|
+| `show_settings_ui` が `false` | 画面を出さず、config.json の値（＋環境変数）で開始。画面に戻すには config.json で `true` にする |
+| Web ブラウザ版（PCME 0.2.0）など、Tk の画面が無いとき | 画面を出さず、config.json の値で開始 |
+| 実行リスト（連続実行）の中で動かすとき | 画面を出さない。最後に開始したときの設定（初回は config.json の値）で動く |
+
+### 追加した設定項目
+
+| 項目 | 型 | デフォルト | 有効範囲 | 意味 |
+|---|---|---|---|---|
+| `show_settings_ui` | 真偽値 | `true` | `true` / `false` | Start で設定画面を出すか |
+| `settings_ui_timeout_seconds` | 整数 | `60` | 0 以上（秒） | 何も操作しないときに自動で開始するまでの秒数。`0` で自動開始しない |
+
+### Poke-Controller-Modified-Extension 0.2.0 での注意
+
+- コマンド名は「ZA ドーナツ厳選 v2.1.0」です。0.2.0 は `NAME` を構文解析だけで読むため、v2.1.0 では `NAME` を文字列リテラルで書いています（v2.0.0 までの f 文字列では一覧に出ませんでした。[SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md#poke-controller-のコマンド名name)）。
+- どうぐモード（どうぐ＋どっさり）のドーナツには、ほかくパワーは付きません。v2.1.0 では、config の値に関係なくプログラム側でほかくパワーを判定から外します（`enable_capture_power` / `capture_compromise` は無視、ほかくパワーを含む `tool_conditions` のカスタム条件も使いません）。
+- 設定画面は Poke-Controller のテーマ（ダークなど）の色に合わせます。
+- 設定画面の入力欄・コンボボックスにカーソルがある間は、Poke-Controller 本体の仕組みで、キーボードでの手動操作（ゲーム機へのキー送信）が止まります。
 
 ---
 
@@ -141,6 +196,8 @@ ZA_donut_correct/
 | `enable_capture_power` | 真偽値 | `false` | `true` / `false` | `ENABLE_CAPTURE_POWER` |
 | `level_capture` | 整数 | `1` | `1`〜`3` | `CAPTURE_LEVEL` |
 | `capture_compromise` | 真偽値 | `true` | `true` / `false` | `ENABLE_CAPTURE_COMPROMISE` |
+| `show_settings_ui` | 真偽値 | `true` | `true` / `false` | — |
+| `settings_ui_timeout_seconds` | 整数 | `60` | 0 以上（秒、0 で自動開始しない） | — |
 
 ※ `type` のデフォルト値はソース上 `"Dradon"`（タイプミス）です。`type` を省略すると色違い判定が成立しません。shiny系では **必ず `type` を書いてください**（[既知の問題](#既知の問題v200)参照）。
 
@@ -534,6 +591,8 @@ backupRestart（ソフト再起動）
 
 環境変数を設定すると config.json より優先されます。Poke-Controller を起動するシェルで設定してください。
 
+> v2.1.0: [設定画面](#設定画面v210)から開始したときは、画面の値が優先されます（環境変数は使われません）。環境変数が効くのは、`show_settings_ui: false` のときと、画面を出さずに開始したときです。
+
 | 環境変数 | 対応する項目 | 備考 |
 |---|---|---|
 | `RECIPE` | `recipe` | |
@@ -602,7 +661,8 @@ export TYPE="Ghost, Dark"
 | 1 | `day_night_interval: 0` で無効にならない | 毎ループで昼夜切り替えが走り、ドーナツ作成に進まない | `999999` など大きい値を指定 |
 | 2 | `type` のデフォルト値が `"Dradon"`（タイプミス） | `type` を省略すると色違い判定が成立しない | `type` を必ず明記 |
 | 3 | `lv1.png` が同梱されておらず、読み込み対象にも入っていない | レベル指定 `1` が `2` と同じ動作になる | `lv1.png` の追加と、コードへの1行追加（[IMAGE_TEMPLATES.md](IMAGE_TEMPLATES.md#lv1-を検出できるようにする)） |
-| 4 | Poke-Controller Modified Extension 0.2.0 以降でコマンド一覧に表示されない | コマンドクラスの `NAME` が f 文字列のため、静的解析で読み取れない | `NAME` を文字列リテラルにする（[SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md#poke-controller-のコマンド名name)参照） |
+| 4 | Poke-Controller Modified Extension 0.2.0 以降でコマンド一覧に表示されない | コマンドクラスの `NAME` が f 文字列のため、静的解析で読み取れない | **v2.1.0 で解消**（`NAME` を文字列リテラルに変更。[SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md#poke-controller-のコマンド名name)） |
+| 5 | どうぐモードで `enable_capture_power: true` にすると成立しない | どうぐ＋どっさりのドーナツにはほかくパワーが付かないのに、判定に使っていた | **v2.1.0 で解消**（プログラム側で、色違いモードのときだけ判定に使う） |
 
 ---
 
@@ -699,7 +759,7 @@ export TYPE="Ghost, Dark"
 | 色違いが一度も成立しない | `type` を書いているか / タイプ名のスペル / `size` の値 |
 | ドーナツを作らず移動ばかりする | `day_night_interval` が `0` になっていないか |
 | 毎回すぐリセットされる | `no_match_timeout_seconds` が1サイクルより短くないか |
-| コマンド一覧に出てこない | Poke-Controller のバージョンと `NAME` の書き方（既知の問題 #4） |
+| コマンド一覧に出てこない | `NAME` が文字列リテラルか（f 文字列・変数は不可。既知の問題 #4）。直したら F5 で再読み込み |
 
 ---
 

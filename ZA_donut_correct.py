@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ZA ドーナツ厳選 v2.0.0 (Major Update)
+ZA ドーナツ厳選 v2.1.0
+・開始時に設定画面を表示し、config.json の項目を選んでから実行する方式を追加 (Update v2.1.0)
+・Poke-Controller-Modified-Extension 0.2.0 に対応（予約・モニターからの開始は自動で開始、Web版・実行リストは画面なし）(Update v2.1.0)
+・コマンド名を文字列リテラルで固定（PCME 0.2.0 は NAME を静的に読むため。f 文字列だと一覧に出ない）(Update v2.1.0)
+・どうぐ＋どっさりのときは、config の値に関係なく、ほかくパワーを判定に使わないよう修正（ほかくを含むカスタム条件も外す）(Update v2.1.0)
+v2.0.0 (Major Update)
 ・設定をconfig.jsonに外部化し、メインロジック修正時の設定上書きを防止 (Update v2.0.0)
 ・昼夜切り替え機能の追加（設定間隔でイベールセンターに移動して昼夜変更、backup_restart後に再開）(Update v2.0.0)
 ・設定ガイド（USER_CONFIG_GUIDE.md）を新規追加 (Update v2.0.0)
@@ -35,7 +40,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 
 # 【外部設定ファイルのパス】
 # config.json に詳細設定を記述してください
@@ -45,6 +50,37 @@ CONFIG_FILE = 'config.json'
 # =============================================================================
 # ▲▲▲ 設定エリアここまで ▲▲▲
 # =============================================================================
+
+# --- 設定のデフォルト値 ---
+DEFAULT_CONFIG = {
+    'recipe': 'recipe1',
+    'type': 'Dradon',
+    'item_class': 'kinomi',
+    'size': 'small',
+    'level_size': 3,
+    'level_extra': 3,
+    'threshold_label': 0.75,
+    'threshold_icon': 0.75,
+    'threshold_level': 0.89,
+    'threshold_result': 0.80,
+    'max_loop': 999999,
+    'retry_limit': 2,
+    'debug_log': True,
+    'no_match_timeout_seconds': 60,
+    'day_night_interval': 60,
+    'enable_loop_after_success': False,
+    'loop_after_success_max': 1,
+    'use_custom_conditions': False,
+    'conditions_file': 'donut_conditions.json',
+    'timing_mode': 'switch2',
+    'enable_capture_power': False,
+    'level_capture': 1,
+    'capture_compromise': True,
+    # --- 設定画面 (v2.1.0) ---
+    'show_settings_ui': True,
+    'settings_ui_timeout_seconds': 60
+}
+
 
 # --- 設定ファイル読み込み関数 ---
 def load_config_file(config_path):
@@ -57,31 +93,7 @@ def load_config_file(config_path):
     Returns:
         dict: 設定値の辞書
     """
-    default_config = {
-        'recipe': 'recipe1',
-        'type': 'Dradon',
-        'item_class': 'kinomi',
-        'size': 'small',
-        'level_size': 3,
-        'level_extra': 3,
-        'threshold_label': 0.75,
-        'threshold_icon': 0.75,
-        'threshold_level': 0.89,
-        'threshold_result': 0.80,
-        'max_loop': 999999,
-        'retry_limit': 2,
-        'debug_log': True,
-        'no_match_timeout_seconds': 60,
-        'day_night_interval': 60,
-        'enable_loop_after_success': False,
-        'loop_after_success_max': 1,
-        'use_custom_conditions': False,
-        'conditions_file': 'donut_conditions.json',
-        'timing_mode': 'switch2',
-        'enable_capture_power': False,
-        'level_capture': 1,
-        'capture_compromise': True
-    }
+    default_config = dict(DEFAULT_CONFIG)
 
     # スクリプトディレクトリを取得
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -109,113 +121,13 @@ def load_config_file(config_path):
 # 設定ファイルから読み込み
 config = load_config_file(CONFIG_FILE)
 
-# 各設定値を環境変数 > 設定ファイル > デフォルト値 の順で決定
-SETTING_RECIPE = os.environ.get('RECIPE', os.environ.get('MODE', config['recipe'])).lower()
-INPUT_TYPE_RAW = os.environ.get('TYPE', config['type'])
-
-# 残りの設定値をロード
-SETTING_ITEM_CLASS = config['item_class']
-SETTING_SIZE = config['size']
-SETTING_LEVEL_SIZE = config['level_size']
-SETTING_LEVEL_EXTRA = config['level_extra']
-SETTING_THRESHOLD_LABEL = config['threshold_label']
-SETTING_THRESHOLD_ICON = config['threshold_icon']
-SETTING_THRESHOLD_LEVEL = config['threshold_level']
-SETTING_THRESHOLD_RESULT = config['threshold_result']
-SETTING_MAX_LOOP = config['max_loop']
-SETTING_RETRY_LIMIT = config['retry_limit']
-SETTING_DEBUG_LOG = config['debug_log']
-SETTING_NO_MATCH_TIMEOUT_SECONDS = config['no_match_timeout_seconds']
-SETTING_DAY_NIGHT_INTERVAL = config['day_night_interval']
-SETTING_ENABLE_LOOP_AFTER_SUCCESS = config['enable_loop_after_success']
-SETTING_LOOP_AFTER_SUCCESS_MAX = config['loop_after_success_max']
-SETTING_USE_CUSTOM_CONDITIONS = config['use_custom_conditions']
-SETTING_CONDITIONS_FILE = config['conditions_file']
-SETTING_TIMING_MODE = config['timing_mode']
-SETTING_ENABLE_CAPTURE_POWER = config['enable_capture_power']
-SETTING_LEVEL_CAPTURE = config['level_capture']
-SETTING_CAPTURE_COMPROMISE = config['capture_compromise']
-
-# --- 設定値の読み込み処理 ---
-ENV_RECIPE = os.environ.get('RECIPE', os.environ.get('MODE', SETTING_RECIPE)).lower()
-# INPUT_TYPE_RAW は既に114行目で定義されている
-
-# 複数タイプ対応：カンマ区切りをリスト化し、空白除去・Capitalize
-TARGET_TYPES = [t.strip().capitalize() for t in INPUT_TYPE_RAW.split(',') if t.strip()]
-TARGET_TYPE_Display = "/".join(TARGET_TYPES)
-
-# 環境変数で上書き可能な設定値の読み込み（環境変数 > 設定ファイル）
-SIZE = os.environ.get('SIZE', SETTING_SIZE).lower()
-INPUT_ITEM_CLASS = os.environ.get('ITEM_CLASS', SETTING_ITEM_CLASS).lower()
-
-# タイミングモード設定
-TIMING_MODE = os.environ.get('TIMING_MODE', SETTING_TIMING_MODE).lower()
-if TIMING_MODE not in ['switch1', 'switch2']:
-    print(f"[Warning] Unknown TIMING_MODE '{TIMING_MODE}'. Fallback to 'switch2'.")
-    TIMING_MODE = 'switch2'
-
-# レベル設定
-try:
-    SIZE_LEVEL_REQ = int(os.environ.get('SIZE_LEVEL', str(SETTING_LEVEL_SIZE)))
-except:
-    SIZE_LEVEL_REQ = 3
-
-try:
-    EXTRA_LEVEL_REQ = int(os.environ.get('EXTRA_LEVEL', str(SETTING_LEVEL_EXTRA)))
-except:
-    EXTRA_LEVEL_REQ = 3
-
-# 詳細設定
-THRESHOLD_LABEL = float(os.environ.get('THRESHOLD_LABEL', SETTING_THRESHOLD_LABEL))
-THRESHOLD_ICON  = float(os.environ.get('THRESHOLD_ICON', SETTING_THRESHOLD_ICON))
-THRESHOLD_LEVEL = float(os.environ.get('THRESHOLD_LEVEL', SETTING_THRESHOLD_LEVEL))
-THRESHOLD_RESULT = float(os.environ.get('THRESHOLD_RESULT', SETTING_THRESHOLD_RESULT))
-
-MAX_LOOP    = int(os.environ.get('MAX_LOOP', SETTING_MAX_LOOP))
-RETRY_LIMIT = int(os.environ.get('RETRY_LIMIT', SETTING_RETRY_LIMIT))
-DEBUG_LOG_STR = os.environ.get('DEBUG_LOG', str(SETTING_DEBUG_LOG)).lower()
-DEBUG_LOG   = True if DEBUG_LOG_STR == 'true' else False
-
-# 目標達成後ループ設定の読み込み
-ENABLE_LOOP_AFTER_SUCCESS = True if os.environ.get('ENABLE_LOOP_AFTER_SUCCESS', str(SETTING_ENABLE_LOOP_AFTER_SUCCESS)).lower() == 'true' else False
-LOOP_AFTER_SUCCESS_MAX = int(os.environ.get('LOOP_AFTER_SUCCESS_MAX', str(SETTING_LOOP_AFTER_SUCCESS_MAX)))
-
-# --- ほかくパワー設定読み込み ---
-ENABLE_CAPTURE_POWER = True if os.environ.get('ENABLE_CAPTURE_POWER', str(SETTING_ENABLE_CAPTURE_POWER)).lower() == 'true' else False
-
-try:
-    CAPTURE_LEVEL_REQ = int(os.environ.get('CAPTURE_LEVEL', str(SETTING_LEVEL_CAPTURE)))
-except:
-    CAPTURE_LEVEL_REQ = 3
-
-ENABLE_CAPTURE_COMPROMISE = True if os.environ.get('ENABLE_CAPTURE_COMPROMISE', str(SETTING_CAPTURE_COMPROMISE)).lower() == 'true' else False
-
-# --- 外部条件ファイル設定読み込み ---
-ENABLE_CUSTOM_CONDITIONS = True if os.environ.get('USE_CUSTOM_CONDITIONS', str(SETTING_USE_CUSTOM_CONDITIONS)).lower() == 'true' else False
-CONDITIONS_FILE = os.environ.get('CONDITIONS_FILE', SETTING_CONDITIONS_FILE)
-
-# --- 連続マッチなし時のバックアップ再開設定読み込み ---
-try:
-    NO_MATCH_TIMEOUT_SECONDS = int(os.environ.get('NO_MATCH_TIMEOUT_SECONDS', str(SETTING_NO_MATCH_TIMEOUT_SECONDS)))
-except:
-    NO_MATCH_TIMEOUT_SECONDS = 60
-
-# --- 昼夜切り替え間隔設定読み込み ---
-try:
-    DAY_NIGHT_INTERVAL = int(os.environ.get('DAY_NIGHT_INTERVAL', str(SETTING_DAY_NIGHT_INTERVAL))) * 60  # 分を秒に変換
-except:
-    DAY_NIGHT_INTERVAL = 3600  # デフォルト60分
-
-
 # =============================================================================
-# 動的レシピ検出機能
-# =============================================================================
-# レシピ管理機能
+# レシピ・カスタム条件の読み込み関数
 # =============================================================================
 # スクリプトファイルの場所を取得（絶対パス）
 SCRIPT_DIR_ABS = os.path.dirname(os.path.abspath(__file__))
 RECIPE_DIR_ABS = os.path.join(SCRIPT_DIR_ABS, 'recipes')
-CONDITIONS_FILE_ABS = os.path.join(SCRIPT_DIR_ABS, CONDITIONS_FILE)
+CONFIG_FILE_ABS = os.path.join(SCRIPT_DIR_ABS, CONFIG_FILE)
 
 
 def get_valid_recipes():
@@ -275,22 +187,25 @@ def load_recipe(recipe_name):
     }
 
 
-def load_custom_conditions():
+def load_custom_conditions(conditions_file_abs, conditions_file):
     """
     外部条件ファイルからカスタム条件を読み込む関数
+
+    Args:
+        conditions_file_abs: 条件ファイルの絶対パス
+        conditions_file: 条件ファイル名（ログ表示用）
 
     Returns:
         dict: モードごとの条件リスト
 
     Raises:
-        FileNotFoundError: 条件ファイルが見つからない場合
         json.JSONDecodeError: JSON形式が不正な場合
     """
-    if not os.path.exists(CONDITIONS_FILE_ABS):
-        print(f"[Warning] 条件ファイルが見つかりません: {CONDITIONS_FILE_ABS}")
+    if not os.path.exists(conditions_file_abs):
+        print(f"[Warning] 条件ファイルが見つかりません: {conditions_file_abs}")
         return {'shiny_conditions': [], 'tool_conditions': []}
 
-    with open(CONDITIONS_FILE_ABS, 'r', encoding='utf-8') as f:
+    with open(conditions_file_abs, 'r', encoding='utf-8') as f:
         conditions_dict = json.load(f)
 
     # 各モードの条件をフィルタリング
@@ -303,67 +218,10 @@ def load_custom_conditions():
         if mode_key in conditions_dict:
             enabled = [c for c in conditions_dict[mode_key] if c.get('enabled', True)]
             result[mode_key] = enabled
-            print(f"[System] {mode_key}: {len(enabled)} conditions loaded from {CONDITIONS_FILE}")
+            print(f"[System] {mode_key}: {len(enabled)} conditions loaded from {conditions_file}")
 
     return result
 
-
-# カスタム条件を読み込み
-CUSTOM_CONDITIONS_DICT = load_custom_conditions() if ENABLE_CUSTOM_CONDITIONS else {'shiny_conditions': [], 'tool_conditions': []}
-
-
-
-
-# 有効性チェック
-valid_recipes = get_valid_recipes()
-
-# デバッグ用：有効なレシピを表示
-if valid_recipes:
-    print(f"[System] Available recipes: {', '.join(valid_recipes)}")
-
-if ENV_RECIPE not in valid_recipes:
-    # 既存の振り分けロジックを維持（後方互換性）
-    if 'shiny' in ENV_RECIPE:
-        if '4' in ENV_RECIPE:
-            ENV_RECIPE = 'shiny4'
-        elif '3' in ENV_RECIPE:
-            ENV_RECIPE = 'shiny3'
-        elif '1' in ENV_RECIPE:
-            ENV_RECIPE = 'shiny1'
-        else:
-            ENV_RECIPE = 'shiny2'
-    elif 'rainbow' in ENV_RECIPE:
-        if '2' in ENV_RECIPE:
-            ENV_RECIPE = 'rainbow2'
-        elif '3' in ENV_RECIPE:
-            ENV_RECIPE = 'rainbow3'
-        else:
-            ENV_RECIPE = 'rainbow1'
-    elif '2' in ENV_RECIPE:
-        ENV_RECIPE = 'recipe2'
-    else:
-        ENV_RECIPE = 'recipe1'
-
-    # 振り分け後のレシピが有効かチェック
-    if ENV_RECIPE in valid_recipes:
-        print(f"[System] Mode Adjusted -> {ENV_RECIPE}")
-    else:
-        print(f"[System] Recipe '{ENV_RECIPE}' not found in available recipes")
-        print(f"[System] Available recipes: {', '.join(valid_recipes)}")
-
-# レシピをロードして、現在のレシピデータを保持
-CURRENT_RECIPE = load_recipe(ENV_RECIPE)
-print(f"[System] Recipe loaded: {CURRENT_RECIPE['name']} (targets: {', '.join(CURRENT_RECIPE['targets'])})")
-
-# 現在のモードに応じた条件を取得
-if 'shiny' in CURRENT_RECIPE['targets']:
-    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('shiny_conditions', [])
-else:
-    CUSTOM_CONDITIONS = CUSTOM_CONDITIONS_DICT.get('tool_conditions', [])
-
-valid_sizes = ['oyabun', 'big', 'small']
-if SIZE not in valid_sizes:
-    SIZE = 'oyabun'
 
 # 判定用リスト生成関数
 def get_target_levels(req_lvl):
@@ -373,22 +231,199 @@ def get_target_levels(req_lvl):
     if req_lvl <= 1: targets.append('lv1')
     return targets
 
-TARGETS_SIZE = get_target_levels(SIZE_LEVEL_REQ)
-TARGETS_EXTRA = get_target_levels(EXTRA_LEVEL_REQ)
-TARGETS_CAPTURE = get_target_levels(CAPTURE_LEVEL_REQ)
+
+def _is_true(value):
+    """設定値の真偽判定（従来どおり、文字列にして 'true' のときだけ True）"""
+    return str(value).lower() == 'true'
+
+
+def apply_config(cfg, use_env=True):
+    """
+    設定値（config.json の辞書）から、各モジュール変数を決めて反映する (v2.1.0)
+
+    Args:
+        cfg: 設定値の辞書（config.json と同じキー）
+        use_env: True なら環境変数での上書きを有効にする（起動時）。
+                 設定画面で選んだ値を使うときは False（画面の値をそのまま使う）
+    """
+    env = os.environ if use_env else {}
+    g = {}
+
+    # 各設定値を環境変数 > 設定ファイル > デフォルト値 の順で決定
+    recipe = str(env.get('RECIPE', env.get('MODE', cfg['recipe']))).lower()
+    input_type_raw = env.get('TYPE', cfg['type'])
+
+    # 複数タイプ対応：カンマ区切りをリスト化し、空白除去・Capitalize
+    g['INPUT_TYPE_RAW'] = input_type_raw
+    g['TARGET_TYPES'] = [t.strip().capitalize() for t in input_type_raw.split(',') if t.strip()]
+    g['TARGET_TYPE_Display'] = "/".join(g['TARGET_TYPES'])
+
+    # 環境変数で上書き可能な設定値の読み込み（環境変数 > 設定ファイル）
+    size = str(env.get('SIZE', cfg['size'])).lower()
+    g['INPUT_ITEM_CLASS'] = str(env.get('ITEM_CLASS', cfg['item_class'])).lower()
+
+    # タイミングモード設定
+    timing_mode = str(env.get('TIMING_MODE', cfg['timing_mode'])).lower()
+    if timing_mode not in ['switch1', 'switch2']:
+        print(f"[Warning] Unknown TIMING_MODE '{timing_mode}'. Fallback to 'switch2'.")
+        timing_mode = 'switch2'
+    g['TIMING_MODE'] = timing_mode
+
+    # レベル設定
+    try:
+        g['SIZE_LEVEL_REQ'] = int(env.get('SIZE_LEVEL', str(cfg['level_size'])))
+    except Exception:
+        g['SIZE_LEVEL_REQ'] = 3
+
+    try:
+        g['EXTRA_LEVEL_REQ'] = int(env.get('EXTRA_LEVEL', str(cfg['level_extra'])))
+    except Exception:
+        g['EXTRA_LEVEL_REQ'] = 3
+
+    # 詳細設定
+    g['THRESHOLD_LABEL'] = float(env.get('THRESHOLD_LABEL', cfg['threshold_label']))
+    g['THRESHOLD_ICON'] = float(env.get('THRESHOLD_ICON', cfg['threshold_icon']))
+    g['THRESHOLD_LEVEL'] = float(env.get('THRESHOLD_LEVEL', cfg['threshold_level']))
+    g['THRESHOLD_RESULT'] = float(env.get('THRESHOLD_RESULT', cfg['threshold_result']))
+
+    g['MAX_LOOP'] = int(env.get('MAX_LOOP', cfg['max_loop']))
+    g['RETRY_LIMIT'] = int(env.get('RETRY_LIMIT', cfg['retry_limit']))
+    g['DEBUG_LOG'] = _is_true(env.get('DEBUG_LOG', str(cfg['debug_log'])))
+
+    # 目標達成後ループ設定の読み込み
+    g['ENABLE_LOOP_AFTER_SUCCESS'] = _is_true(env.get('ENABLE_LOOP_AFTER_SUCCESS', str(cfg['enable_loop_after_success'])))
+    g['LOOP_AFTER_SUCCESS_MAX'] = int(env.get('LOOP_AFTER_SUCCESS_MAX', str(cfg['loop_after_success_max'])))
+
+    # --- ほかくパワー設定読み込み ---
+    g['ENABLE_CAPTURE_POWER'] = _is_true(env.get('ENABLE_CAPTURE_POWER', str(cfg['enable_capture_power'])))
+
+    try:
+        g['CAPTURE_LEVEL_REQ'] = int(env.get('CAPTURE_LEVEL', str(cfg['level_capture'])))
+    except Exception:
+        g['CAPTURE_LEVEL_REQ'] = 3
+
+    g['ENABLE_CAPTURE_COMPROMISE'] = _is_true(env.get('ENABLE_CAPTURE_COMPROMISE', str(cfg['capture_compromise'])))
+
+    # --- 外部条件ファイル設定読み込み ---
+    g['ENABLE_CUSTOM_CONDITIONS'] = _is_true(env.get('USE_CUSTOM_CONDITIONS', str(cfg['use_custom_conditions'])))
+    conditions_file = env.get('CONDITIONS_FILE', cfg['conditions_file'])
+    g['CONDITIONS_FILE'] = conditions_file
+    g['CONDITIONS_FILE_ABS'] = os.path.join(SCRIPT_DIR_ABS, conditions_file)
+
+    # --- 連続マッチなし時のバックアップ再開設定読み込み ---
+    try:
+        g['NO_MATCH_TIMEOUT_SECONDS'] = int(env.get('NO_MATCH_TIMEOUT_SECONDS', str(cfg['no_match_timeout_seconds'])))
+    except Exception:
+        g['NO_MATCH_TIMEOUT_SECONDS'] = 60
+
+    # --- 昼夜切り替え間隔設定読み込み ---
+    try:
+        g['DAY_NIGHT_INTERVAL'] = int(env.get('DAY_NIGHT_INTERVAL', str(cfg['day_night_interval']))) * 60  # 分を秒に変換
+    except Exception:
+        g['DAY_NIGHT_INTERVAL'] = 3600  # デフォルト60分
+
+    # カスタム条件を読み込み
+    if g['ENABLE_CUSTOM_CONDITIONS']:
+        custom_conditions_dict = load_custom_conditions(g['CONDITIONS_FILE_ABS'], conditions_file)
+    else:
+        custom_conditions_dict = {'shiny_conditions': [], 'tool_conditions': []}
+    g['CUSTOM_CONDITIONS_DICT'] = custom_conditions_dict
+
+    # 有効性チェック
+    valid_recipes = get_valid_recipes()
+
+    # デバッグ用：有効なレシピを表示
+    if valid_recipes:
+        print(f"[System] Available recipes: {', '.join(valid_recipes)}")
+
+    if recipe not in valid_recipes:
+        # 既存の振り分けロジックを維持（後方互換性）
+        if 'shiny' in recipe:
+            if '4' in recipe:
+                recipe = 'shiny4'
+            elif '3' in recipe:
+                recipe = 'shiny3'
+            elif '1' in recipe:
+                recipe = 'shiny1'
+            else:
+                recipe = 'shiny2'
+        elif 'rainbow' in recipe:
+            if '2' in recipe:
+                recipe = 'rainbow2'
+            elif '3' in recipe:
+                recipe = 'rainbow3'
+            else:
+                recipe = 'rainbow1'
+        elif '2' in recipe:
+            recipe = 'recipe2'
+        else:
+            recipe = 'recipe1'
+
+        # 振り分け後のレシピが有効かチェック
+        if recipe in valid_recipes:
+            print(f"[System] Mode Adjusted -> {recipe}")
+        else:
+            print(f"[System] Recipe '{recipe}' not found in available recipes")
+            print(f"[System] Available recipes: {', '.join(valid_recipes)}")
+
+    g['SETTING_RECIPE'] = recipe
+    g['ENV_RECIPE'] = recipe
+
+    # レシピをロードして、現在のレシピデータを保持
+    current_recipe = load_recipe(recipe)
+    g['CURRENT_RECIPE'] = current_recipe
+    print(f"[System] Recipe loaded: {current_recipe['name']} (targets: {', '.join(current_recipe['targets'])})")
+
+    # 現在のモードに応じた条件を取得
+    if 'shiny' in current_recipe['targets']:
+        g['CUSTOM_CONDITIONS'] = custom_conditions_dict.get('shiny_conditions', [])
+    else:
+        # どうぐモード（どうぐ＋どっさり）のドーナツには、ほかくパワーは付かない。
+        # config の値に関係なく、ほかくパワーは判定に使わない
+        if g['ENABLE_CAPTURE_POWER'] or g['ENABLE_CAPTURE_COMPROMISE']:
+            print("[System] どうぐモードのため、ほかくパワーの設定（enable_capture_power / capture_compromise）は使いません")
+        g['ENABLE_CAPTURE_POWER'] = False
+        g['ENABLE_CAPTURE_COMPROMISE'] = False
+        # ほかくパワーを含むカスタム条件は、どうぐモードでは成立しないので外す
+        tool_conditions = []
+        for cond in custom_conditions_dict.get('tool_conditions', []):
+            if any(isinstance(cond.get(k), dict) and cond[k].get('type') == 'capture' for k in ('power1', 'power2', 'power3')):
+                print(f"[Warning] カスタム条件「{cond.get('name', '?')}」はほかくパワーを含むため、どうぐモードでは使いません")
+                continue
+            tool_conditions.append(cond)
+        g['CUSTOM_CONDITIONS'] = tool_conditions
+
+    valid_sizes = ['oyabun', 'big', 'small']
+    if size not in valid_sizes:
+        size = 'oyabun'
+    g['SIZE'] = size
+
+    g['TARGETS_SIZE'] = get_target_levels(g['SIZE_LEVEL_REQ'])
+    g['TARGETS_EXTRA'] = get_target_levels(g['EXTRA_LEVEL_REQ'])
+    g['TARGETS_CAPTURE'] = get_target_levels(g['CAPTURE_LEVEL_REQ'])
+
+    globals().update(g)
+
+    # クラスに持たせている値も合わせる（クラス定義後に呼ばれた場合）
+    cls = globals().get('ZA_DonutV188')
+    if cls is not None:
+        for key in ('THRESHOLD_LABEL', 'THRESHOLD_ICON', 'THRESHOLD_LEVEL', 'THRESHOLD_RESULT',
+                    'MAX_LOOP', 'RETRY_LIMIT', 'DEBUG_LOG',
+                    'ENABLE_LOOP_AFTER_SUCCESS', 'LOOP_AFTER_SUCCESS_MAX'):
+            setattr(cls, key, g[key])
+
+
+# --- 設定値の読み込み処理（起動時: 環境変数 > config.json > デフォルト値） ---
+apply_config(config, use_env=True)
 
 CAPTURE_DIR = "debug_captures"
 os.makedirs(CAPTURE_DIR, exist_ok=True)
 
-# --- コマンド名(NAME)の動的生成 ---
-if 'shiny' in CURRENT_RECIPE['targets']:
-    CMD_NAME_SUFFIX = f"({ENV_RECIPE.capitalize()}/Type=[{TARGET_TYPE_Display}]/{SIZE})"
-else:
-    CMD_NAME_SUFFIX = f"({ENV_RECIPE.capitalize()}/{INPUT_ITEM_CLASS})"
-
-
 class ZA_DonutV188(ImageProcPythonCommand):
-    NAME = f"ZA ドーナツ厳選 {CMD_NAME_SUFFIX} v{VERSION}"
+    # PCME 0.2.0 以降は NAME をソースから構文解析だけで読む（実行しない）。
+    # f 文字列や変数を使うと「not a literal」として無視され、コマンド一覧に出なくなるので、必ず文字列リテラルで書く。
+    # バージョンを上げるときは、上の VERSION とこの NAME の両方を書き換えること。
+    NAME = "ZA ドーナツ厳選 v2.1.0"
 
     THRESHOLD_LABEL = THRESHOLD_LABEL
     THRESHOLD_ICON  = THRESHOLD_ICON
@@ -408,8 +443,13 @@ class ZA_DonutV188(ImageProcPythonCommand):
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     FOLDER = os.path.abspath(os.path.join(SCRIPT_DIR, 'LegendsZA'))
 
-    def __init__(self, cam, preview=None):
-        super().__init__(cam)
+    def __init__(self, cam, gui=None):
+        # PCME 0.2.0: 第2引数にプレビュー（CaptureArea）が渡される。設定画面の親ウィンドウに使う
+        try:
+            super().__init__(cam, gui)
+        except TypeError:
+            super().__init__(cam)
+            self.gui = gui
         self.count = 0
         self.templates = {}
         self._load_templates()
@@ -1303,7 +1343,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
         # === ほかくパワー妥協ロジック ===
         capture_compromise_success = False
-        if ENABLE_CAPTURE_COMPROMISE and 'shiny' in ENV_RECIPE and ENABLE_CAPTURE_POWER:
+        if ENABLE_CAPTURE_COMPROMISE and 'shiny' in CURRENT_RECIPE['targets'] and ENABLE_CAPTURE_POWER:
             # 条件：かがやきが「ぜんぶ」(All)かつ目標レベル以上
             if matched_type_name == "All" and res2_lvl in TARGETS_EXTRA:
                 # ほかくパワーがターゲットタイプのいずれかに該当、または「すべて」ならOK
@@ -1325,11 +1365,92 @@ class ZA_DonutV188(ImageProcPythonCommand):
         # 最終成功判定
         # 通常判定： (サイズ一致 AND かがやき一致) AND (ほかくパワー一致 OR ほかくパワー妥協成立)
         base_match = (res1_lvl is not None and res2_lvl is not None)
-        capture_ok = (res3_lvl is not None) if ENABLE_CAPTURE_POWER else True
+        # ほかくパワーは色違いモードのときだけ判定に使う（どうぐ＋どっさりのドーナツには付かない）
+        capture_ok = (res3_lvl is not None) if ('shiny' in CURRENT_RECIPE['targets'] and ENABLE_CAPTURE_POWER) else True
 
         if base_match and (capture_ok or capture_compromise_success):
             return True
         return False
+
+    # =========================================================================
+    # 開始前の設定画面 (v2.1.0)
+    # =========================================================================
+    def _tk_root(self):
+        """設定画面の親にする Tk のウィンドウ（Web ブラウザ版など、Tk の画面が無いときは None）"""
+        gui = getattr(self, 'gui', None)
+        if gui is None:
+            return None
+        try:
+            import tkinter as tk
+            if not isinstance(gui, tk.Misc):
+                return None
+            return gui.winfo_toplevel()
+        except Exception:
+            return None
+
+    def _later(self, fn):
+        """画面のスレッドで、今の処理が終わった後に fn を呼ぶ（キャンセル時の postProcess 用）"""
+        if fn is None:
+            return
+        root = self._tk_root()
+        try:
+            if root is not None:
+                root.after_idle(fn)
+                return
+        except Exception:
+            pass
+        fn()
+
+    def _reload_templates(self):
+        self.templates = {}
+        self._load_templates()
+
+    def start(self, ser, postProcess):
+        """
+        Start ボタンで呼ばれる（画面のスレッド）。設定画面を出して、選んだ設定で開始する。
+        - PCME 0.2.0 の command_service.start は、この関数が戻った後に状態を「実行中」にする。
+          そのため、キャンセル時の postProcess（ボタンを戻す処理）は after_idle で後から呼ぶ
+        - 実行リストは start を通らず do_safe を直接呼ぶので、画面は出ない（config.json の値で動く）
+        """
+        try:
+            ok = self._prepare_settings()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            print("[Error] 設定画面でエラーが出たため、開始しませんでした。")
+            ok = False
+        if not ok:
+            print("[System] 開始をキャンセルしました。")
+            self._later(postProcess)
+            return None
+        return super().start(ser, postProcess)
+
+    def _prepare_settings(self):
+        """設定を決めて反映する。開始してよければ True、キャンセルなら False"""
+        cfg = load_config_file(CONFIG_FILE)
+        root = self._tk_root()
+        show = _is_true(cfg.get('show_settings_ui', True))
+        if not show or root is None or not _is_main_thread():
+            if show and root is None:
+                print("[System] 設定画面を出せない画面（Web ブラウザ版など）なので、config.json の値で開始します。")
+            apply_config(cfg, use_env=True)
+            self._reload_templates()
+            return True
+
+        result = _SettingsDialog(root, cfg).show()
+        if result is None:
+            return False
+        new_cfg, save = result
+        if save:
+            try:
+                save_config_file(CONFIG_FILE, new_cfg)
+                print(f"[System] 設定を保存しました: {CONFIG_FILE_ABS}")
+            except Exception as e:
+                print(f"[Warning] config.json に保存できませんでした（この回は画面の値で動きます）: {e}")
+        apply_config(new_cfg, use_env=False)
+        self.DEBUG_LOG = DEBUG_LOG
+        self._reload_templates()
+        return True
 
     def do(self):
         self.log(f"=== ZA ドーナツ v{VERSION} ({ENV_RECIPE}) ===")
@@ -1449,3 +1570,477 @@ class ZA_DonutV188(ImageProcPythonCommand):
             else:
                 self.backupRestart()
         self.finish()
+
+
+# =============================================================================
+# 設定画面 (v2.1.0)
+# =============================================================================
+def _is_main_thread():
+    import threading
+    return threading.current_thread() is threading.main_thread()
+
+
+def save_config_file(config_path, cfg):
+    """
+    config.json に書き込む。ファイルにあるキーの順番はそのまま、無いキーは後ろに足す。
+    （画面に無いキーや、知らないキーも消さない）
+    """
+    abs_path = os.path.join(SCRIPT_DIR_ABS, config_path)
+    data = {}
+    if os.path.exists(abs_path):
+        try:
+            with open(abs_path, 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                data = loaded
+        except Exception:
+            data = {}
+    for key, value in cfg.items():
+        data[key] = value
+    tmp_path = abs_path + '.tmp'
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    os.replace(tmp_path, abs_path)
+
+
+# 選択肢（docs/USER_CONFIG_GUIDE.md の「選択肢一覧」と同じ）
+UI_TYPES = [
+    ('Normal', 'ノーマル'), ('Fire', 'ほのお'), ('Water', 'みず'), ('Grass', 'くさ'),
+    ('Electric', 'でんき'), ('Ice', 'こおり'), ('Fighting', 'かくとう'), ('Poison', 'どく'),
+    ('Ground', 'じめん'), ('Flying', 'ひこう'), ('Psychic', 'エスパー'), ('Bug', 'むし'),
+    ('Rock', 'いわ'), ('Ghost', 'ゴースト'), ('Dragon', 'ドラゴン'), ('Dark', 'あく'),
+    ('Steel', 'はがね'), ('Fairy', 'フェアリー'),
+]
+UI_SIZES = [('oyabun', 'オヤブン'), ('big', 'でかでか'), ('small', 'ちびちび')]
+UI_ITEM_CLASSES = [('kinomi', 'きのみ'), ('ball', 'ボール'), ('coin', 'コイン'),
+                   ('treasure', '宝物'), ('special', '特別'), ('candy', 'アメ')]
+UI_TIMING_MODES = [('switch2', 'Switch 2 / 有機EL など（速い）'), ('switch1', 'Switch / Lite など（遅い）')]
+
+# 設定画面の値より優先されなくなる環境変数（画面を使うときは、画面の値で動く）
+UI_ENV_KEYS = ['RECIPE', 'MODE', 'TYPE', 'ITEM_CLASS', 'SIZE', 'SIZE_LEVEL', 'EXTRA_LEVEL', 'THRESHOLD_LABEL',
+               'THRESHOLD_ICON', 'THRESHOLD_LEVEL', 'THRESHOLD_RESULT', 'MAX_LOOP', 'RETRY_LIMIT', 'DEBUG_LOG',
+               'NO_MATCH_TIMEOUT_SECONDS', 'DAY_NIGHT_INTERVAL', 'ENABLE_LOOP_AFTER_SUCCESS', 'LOOP_AFTER_SUCCESS_MAX',
+               'USE_CUSTOM_CONDITIONS', 'CONDITIONS_FILE', 'TIMING_MODE', 'ENABLE_CAPTURE_POWER', 'CAPTURE_LEVEL',
+               'ENABLE_CAPTURE_COMPROMISE']
+
+
+def _recipe_infos():
+    """[(レシピ名, NAME, 'shiny' / 'tool')]（読めないレシピは飛ばす）"""
+    infos = []
+    for name in get_valid_recipes():
+        try:
+            r = load_recipe(name)
+        except Exception as e:
+            print(f"[Warning] レシピ {name} を読めませんでした: {e}")
+            continue
+        infos.append((name, r['name'], 'shiny' if 'shiny' in r['targets'] else 'tool'))
+    return infos
+
+
+class _SettingsDialog:
+    """
+    開始前に config.json の項目を選ぶ画面（Tk の Toplevel。Start を押した画面のスレッドで開き、閉じるまで待つ）。
+    show() の戻り値: (設定の辞書, config.json に保存するか)。キャンセルなら None
+    """
+
+    def __init__(self, root, cfg):
+        import tkinter as tk
+        from tkinter import ttk, messagebox
+        self.tk, self.ttk, self.messagebox = tk, ttk, messagebox
+        self.root = root
+        self.cfg = dict(DEFAULT_CONFIG)
+        self.cfg.update(cfg)
+        self.result = None
+        self._countdown = None
+        self._after_id = None
+        self.recipes = _recipe_infos()
+        self.colors = self._theme_colors(root)
+
+    @staticmethod
+    def _theme_colors(root):
+        """PCME 0.2.0 のテーマの色（使えない色名のとき・テーマが無いときは、決まった色）"""
+        colors = {'bg': None, 'muted': '#707070', 'danger': '#c0392b'}
+        try:
+            import Theme
+            for role in colors:
+                try:
+                    value = Theme.color(role)
+                    root.winfo_rgb(value)      # この OS で使える色か（"SystemGrayText" などは Windows だけ）
+                    colors[role] = value
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return colors
+
+    # ---------------------------------------------------------------- 部品
+    def _note(self, parent, text, danger=False, **pack):
+        lbl = self.ttk.Label(parent, text=text, wraplength=620,
+                             foreground=self.colors['danger' if danger else 'muted'])
+        lbl.pack(anchor='w', **pack)
+        return lbl
+
+    def _row(self, parent, label):
+        f = self.ttk.Frame(parent)
+        f.pack(fill='x', pady=2)
+        self.ttk.Label(f, text=label, width=24).pack(side='left')
+        return f
+
+    def _spin(self, parent, label, var, from_, to, inc=1, note='', width=8):
+        f = self._row(parent, label)
+        self.ttk.Spinbox(f, from_=from_, to=to, increment=inc, textvariable=var, width=width).pack(side='left')
+        if note:
+            self.ttk.Label(f, text=note, foreground=self.colors['muted']).pack(side='left', padx=6)
+        return f
+
+    def _radios(self, parent, label, var, choices):
+        f = self._row(parent, label)
+        for value, text in choices:
+            self.ttk.Radiobutton(f, text=text, value=value, variable=var).pack(side='left', padx=(0, 8))
+        return f
+
+    def _levels(self, parent, label, var):
+        return self._radios(parent, label, var, [('3', 'Lv3 のみ'), ('2', 'Lv2 以上'), ('1', 'Lv1 以上 ※')])
+
+    # ---------------------------------------------------------------- 画面
+    def show(self):
+        tk, ttk = self.tk, self.ttk
+        c = self.cfg
+        win = tk.Toplevel(self.root)
+        self.win = win
+        win.title(f"ZA ドーナツ厳選 v{VERSION}: 設定")
+        win.transient(self.root)
+        win.resizable(False, False)
+        if self.colors['bg']:
+            try:
+                win.configure(bg=self.colors['bg'])
+            except tk.TclError:
+                pass
+
+        body = ttk.Frame(win, padding=12)
+        body.pack(fill='both', expand=True)
+
+        # --- 変数
+        recipe_values = [f"{n} — {title}（{'色違い' if mode == 'shiny' else 'どうぐ'}）" for n, title, mode in self.recipes]
+        recipe_names = [n for n, _, _ in self.recipes]
+        cur_recipe = str(c['recipe']).lower()
+        self.v_recipe = tk.StringVar(value=recipe_values[recipe_names.index(cur_recipe)] if cur_recipe in recipe_names
+                                     else (recipe_values[0] if recipe_values else ''))
+        self.recipe_values, self.recipe_names = recipe_values, recipe_names
+        cur_types = [t.strip().capitalize() for t in str(c['type']).split(',') if t.strip()]
+        self.type_order = [t for t in cur_types if t in dict(UI_TYPES)]
+        self.v_types = {t: tk.BooleanVar(value=t in cur_types) for t, _ in UI_TYPES}
+        self.v_size = tk.StringVar(value=str(c['size']).lower() if str(c['size']).lower() in dict(UI_SIZES) else 'oyabun')
+        self.v_item = tk.StringVar(value=str(c['item_class']).lower())
+        self.v_level_size = tk.StringVar(value=str(c['level_size']))
+        self.v_level_extra = tk.StringVar(value=str(c['level_extra']))
+        self.v_capture = tk.BooleanVar(value=_is_true(c['enable_capture_power']))
+        self.v_level_capture = tk.StringVar(value=str(c['level_capture']))
+        self.v_compromise = tk.BooleanVar(value=_is_true(c['capture_compromise']))
+        self.v_max_loop = tk.StringVar(value=str(c['max_loop']))
+        self.v_retry = tk.StringVar(value=str(c['retry_limit']))
+        self.v_loop_after = tk.BooleanVar(value=_is_true(c['enable_loop_after_success']))
+        self.v_loop_after_max = tk.StringVar(value=str(c['loop_after_success_max']))
+        self.v_no_match = tk.StringVar(value=str(c['no_match_timeout_seconds']))
+        self.v_day_night = tk.StringVar(value=str(c['day_night_interval']))
+        self.v_timing = tk.StringVar(value=str(c['timing_mode']).lower() if str(c['timing_mode']).lower() in dict(UI_TIMING_MODES) else 'switch2')
+        self.v_debug = tk.BooleanVar(value=_is_true(c['debug_log']))
+        self.v_custom = tk.BooleanVar(value=_is_true(c['use_custom_conditions']))
+        self.v_cond_file = tk.StringVar(value=str(c['conditions_file']))
+        self.v_th = {k: tk.StringVar(value=str(c[k])) for k in
+                     ('threshold_label', 'threshold_icon', 'threshold_level', 'threshold_result')}
+        self.v_show_ui = tk.BooleanVar(value=_is_true(c.get('show_settings_ui', True)))
+        self.v_ui_timeout = tk.StringVar(value=str(c.get('settings_ui_timeout_seconds', 60)))
+        self.v_save = tk.BooleanVar(value=True)
+
+        # --- レシピ（上に固定）
+        f = self._row(body, 'レシピ')
+        cb = ttk.Combobox(f, textvariable=self.v_recipe, values=recipe_values, state='readonly', width=58)
+        cb.pack(side='left')
+        cb.bind('<<ComboboxSelected>>', lambda e: self._update_mode())
+        self.mode_label = ttk.Label(body, text='', foreground=self.colors['muted'])
+        self.mode_label.pack(anchor='w', pady=(0, 6))
+
+        nb = ttk.Notebook(body)
+        nb.pack(fill='both', expand=True)
+        tab_target = ttk.Frame(nb, padding=10)
+        tab_run = ttk.Frame(nb, padding=10)
+        tab_detect = ttk.Frame(nb, padding=10)
+        tab_ui = ttk.Frame(nb, padding=10)
+        nb.add(tab_target, text='狙う条件')
+        nb.add(tab_run, text='回数・リセット')
+        nb.add(tab_detect, text='認識・カスタム条件')
+        nb.add(tab_ui, text='この画面')
+
+        # --- タブ1: 狙う条件
+        self.shiny_frame = ttk.Frame(tab_target)
+        self.tool_frame = ttk.Frame(tab_target)
+
+        sf = self.shiny_frame
+        ttk.Label(sf, text='かがやきパワーのタイプ（複数可。チェックした順に判定。「ぜんぶ」は常に判定）').pack(anchor='w')
+        grid = ttk.Frame(sf)
+        grid.pack(anchor='w', pady=(2, 6))
+        for i, (t, jp) in enumerate(UI_TYPES):
+            ttk.Checkbutton(grid, text=f"{jp}（{t}）", variable=self.v_types[t],
+                            command=lambda t=t: self._type_toggled(t)).grid(row=i // 6, column=i % 6, sticky='w', padx=(0, 10), pady=1)
+        self.type_order_label = ttk.Label(sf, text='', foreground=self.colors['muted'])
+        self.type_order_label.pack(anchor='w', pady=(0, 6))
+        self._radios(sf, 'サイズパワー', self.v_size, UI_SIZES)
+        self._levels(sf, 'サイズパワーのレベル', self.v_level_size)
+        self._levels(sf, 'かがやきパワーのレベル', self.v_level_extra)
+        ttk.Separator(sf).pack(fill='x', pady=6)
+        ttk.Checkbutton(sf, text='ほかくパワーも条件にする', variable=self.v_capture,
+                        command=self._update_capture).pack(anchor='w')
+        self.capture_rows = [self._levels(sf, 'ほかくパワーのレベル', self.v_level_capture)]
+        cf = ttk.Frame(sf)
+        cf.pack(fill='x')
+        ttk.Checkbutton(cf, text='ほかくパワーの妥協判定（かがやき「ぜんぶ」のとき、ほかくのタイプ一致で成立）',
+                        variable=self.v_compromise).pack(anchor='w')
+        self.capture_rows.append(cf)
+
+        tf = self.tool_frame
+        f = self._row(tf, 'どうぐパワーの種類')
+        for i, (value, text) in enumerate(UI_ITEM_CLASSES):
+            ttk.Radiobutton(f, text=text, value=value, variable=self.v_item).pack(side='left', padx=(0, 8))
+        self._levels(tf, 'どっさりパワーのレベル', self.v_level_size)
+        self._levels(tf, 'どうぐパワーのレベル', self.v_level_extra)
+        self._note(tab_target, '※ Lv1 の画像（lv1.png）は同梱していないため、「Lv1 以上」は今は「Lv2 以上」と同じ動きです。',
+                   side='bottom', pady=(8, 0))
+
+        # --- タブ2: 回数・リセット
+        r = tab_run
+        self._spin(r, 'ドーナツを作る最大回数', self.v_max_loop, 1, 999999, note='回（ループの上限）', width=10)
+        self._spin(r, '1 回あたりのリトライ回数', self.v_retry, 0, 99, note='回（はずれたとき、作り直す回数）')
+        ttk.Separator(r).pack(fill='x', pady=6)
+        ttk.Checkbutton(r, text='目標を達成しても続ける（ポケセンでセーブしてから再開）', variable=self.v_loop_after).pack(anchor='w')
+        self._spin(r, '　達成何回で終えるか', self.v_loop_after_max, 1, 9999, note='回')
+        ttk.Separator(r).pack(fill='x', pady=6)
+        self._spin(r, '連続はずれでリセット', self.v_no_match, 0, 86400, note='秒（はずれが続いたらバックアップから再開。0 = しない）', width=10)
+        self._spin(r, '昼夜切り替えの間隔', self.v_day_night, 1, 1440, note='分（この間隔でイベールセンターへ移動して昼夜を合わせる）')
+        ttk.Separator(r).pack(fill='x', pady=6)
+        self._radios(r, '動作タイミング', self.v_timing, UI_TIMING_MODES)
+        ttk.Checkbutton(r, text='デバッグログを出す', variable=self.v_debug).pack(anchor='w', pady=(4, 0))
+
+        # --- タブ3: 認識・カスタム条件
+        d = tab_detect
+        ttk.Checkbutton(d, text='カスタム条件（donut_conditions.json など）も使う', variable=self.v_custom).pack(anchor='w')
+        f = self._row(d, '　条件ファイル')
+        json_files = sorted(fn for fn in os.listdir(SCRIPT_DIR_ABS) if fn.endswith('.json') and fn != CONFIG_FILE)
+        ttk.Combobox(f, textvariable=self.v_cond_file, values=json_files, width=30).pack(side='left')
+        ttk.Separator(d).pack(fill='x', pady=6)
+        ttk.Label(d, text='画像認識のしきい値（0.0〜1.0。上げると厳しく、下げるとゆるく）').pack(anchor='w')
+        for key, label in (('threshold_label', 'パワー名（ラベル）'), ('threshold_icon', 'アイコン（タイプ・どうぐ）'),
+                           ('threshold_level', 'レベル（Lv2 / Lv3）'), ('threshold_result', '結果画面')):
+            self._spin(d, '　' + label, self.v_th[key], 0.0, 1.0, inc=0.01, note=f'（{key}）')
+
+        # --- タブ4: この画面
+        u = tab_ui
+        ttk.Checkbutton(u, text='Start を押したときに、この画面を出す', variable=self.v_show_ui).pack(anchor='w')
+        self._note(u, '外した場合は、次から config.json の値ですぐに開始します。'
+                      'もう一度出すには config.json の "show_settings_ui" を true にしてください。')
+        self._spin(u, '何もしなければ自動で開始', self.v_ui_timeout, 0, 3600,
+                   note='秒（予約・モニターからの開始用。0 = 自動で開始しない）')
+
+        # --- 環境変数の注意
+        env_set = [k for k in UI_ENV_KEYS if k in os.environ]
+        if env_set:
+            self._note(body, '環境変数 {} が設定されていますが、この画面から開始したときは画面の値で動きます。'.format(
+                ', '.join(env_set)), danger=True, pady=(6, 0))
+
+        # --- 下のボタン
+        bottom = ttk.Frame(body)
+        bottom.pack(fill='x', pady=(10, 0))
+        ttk.Checkbutton(bottom, text='この設定を config.json に保存する', variable=self.v_save).pack(side='left')
+        ttk.Button(bottom, text='キャンセル', command=self._cancel).pack(side='right', padx=3)
+        ttk.Button(bottom, text='開始', command=self._ok).pack(side='right', padx=3)
+        self.countdown_label = ttk.Label(body, text='', foreground=self.colors['muted'])
+        self.countdown_label.pack(anchor='e', pady=(4, 0))
+
+        win.protocol('WM_DELETE_WINDOW', self._cancel)
+        win.bind('<Escape>', lambda e: self._cancel())
+        # 何か操作したら、自動で開始するのをやめる
+        for seq in ('<Button>', '<Key>', '<MouseWheel>'):
+            win.bind(seq, self._stop_countdown, add='+')
+
+        self._update_mode()
+        self._update_capture()
+        self._update_type_order()
+        self._start_countdown()
+
+        win.update_idletasks()
+        try:
+            x = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - win.winfo_width()) // 2)
+            y = self.root.winfo_rooty() + max(0, (self.root.winfo_height() - win.winfo_height()) // 3)
+            win.geometry(f'+{x}+{y}')
+        except tk.TclError:
+            pass
+        try:
+            win.grab_set()
+        except tk.TclError:
+            pass
+        win.focus_set()
+        self.root.wait_window(win)
+        return self.result
+
+    # ---------------------------------------------------------------- 表示の切り替え
+    def _current_recipe(self):
+        try:
+            i = self.recipe_values.index(self.v_recipe.get())
+        except ValueError:
+            return None, 'tool'
+        return self.recipes[i][0], self.recipes[i][2]
+
+    def _update_mode(self):
+        _, mode = self._current_recipe()
+        self.shiny_frame.pack_forget()
+        self.tool_frame.pack_forget()
+        if mode == 'shiny':
+            self.shiny_frame.pack(fill='x')
+            self.mode_label.configure(text='色違いモード: かがやき × サイズ（＋ほかく）を狙います')
+        else:
+            self.tool_frame.pack(fill='x')
+            self.mode_label.configure(text='どうぐモード: どうぐ × どっさりを狙います')
+
+    def _update_capture(self):
+        state = '!disabled' if self.v_capture.get() else 'disabled'
+        for row in self.capture_rows:
+            for w in row.winfo_children():
+                try:
+                    w.state([state])
+                except Exception:
+                    pass
+
+    def _type_toggled(self, t):
+        if self.v_types[t].get():
+            if t not in self.type_order:
+                self.type_order.append(t)
+        elif t in self.type_order:
+            self.type_order.remove(t)
+        self._update_type_order()
+
+    def _update_type_order(self):
+        jp = dict(UI_TYPES)
+        text = ' → '.join(jp[t] for t in self.type_order) if self.type_order else '（未選択: 「ぜんぶ」のときだけ成立します）'
+        self.type_order_label.configure(text='判定する順: ' + text)
+
+    # ---------------------------------------------------------------- 自動で開始
+    def _start_countdown(self):
+        try:
+            sec = int(float(self.v_ui_timeout.get()))
+        except ValueError:
+            sec = 0
+        if sec <= 0:
+            return
+        self._countdown = sec
+        self._tick()
+
+    def _tick(self):
+        if self._countdown is None:
+            return
+        if self._countdown <= 0:
+            self.countdown_label.configure(text='')
+            self._countdown = None
+            self._ok(auto=True)
+            return
+        self.countdown_label.configure(text=f'あと {self._countdown} 秒操作がなければ、この設定で開始します（何か操作すると止まります）')
+        self._countdown -= 1
+        self._after_id = self.win.after(1000, self._tick)
+
+    def _stop_countdown(self, event=None):
+        if self._countdown is None:
+            return
+        self._countdown = None
+        if self._after_id is not None:
+            try:
+                self.win.after_cancel(self._after_id)
+            except Exception:
+                pass
+            self._after_id = None
+        self.countdown_label.configure(text='')
+
+    # ---------------------------------------------------------------- 決定
+    def _int(self, var, label, lo, hi=None):
+        try:
+            v = int(float(str(var.get()).strip()))
+        except ValueError:
+            raise ValueError(f'{label}: 数字を入れてください')
+        if v < lo or (hi is not None and v > hi):
+            raise ValueError(f'{label}: {lo}〜{hi if hi is not None else ""} の範囲で入れてください')
+        return v
+
+    def _float(self, var, label):
+        try:
+            v = float(str(var.get()).strip())
+        except ValueError:
+            raise ValueError(f'{label}: 数字を入れてください')
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f'{label}: 0.0〜1.0 の範囲で入れてください')
+        return round(v, 4)
+
+    def collect(self):
+        """画面の値を、config.json と同じ形の辞書にする（入力がおかしいときは ValueError）"""
+        recipe, mode = self._current_recipe()
+        if recipe is None:
+            raise ValueError('レシピを選んでください')
+        cfg = dict(self.cfg)
+        cfg['recipe'] = recipe
+        # タイプ: 1 つも選ばないと、かがやきパワーは「ぜんぶ」のときだけ成立する
+        cfg['type'] = ', '.join(self.type_order)
+        cfg['size'] = self.v_size.get()
+        cfg['item_class'] = self.v_item.get()
+        cfg['level_size'] = self._int(self.v_level_size, 'レベル', 1, 3)
+        cfg['level_extra'] = self._int(self.v_level_extra, 'レベル', 1, 3)
+        cfg['enable_capture_power'] = bool(self.v_capture.get())
+        cfg['level_capture'] = self._int(self.v_level_capture, 'ほかくパワーのレベル', 1, 3)
+        cfg['capture_compromise'] = bool(self.v_compromise.get())
+        cfg['max_loop'] = self._int(self.v_max_loop, 'ドーナツを作る最大回数', 1)
+        cfg['retry_limit'] = self._int(self.v_retry, 'リトライ回数', 0)
+        cfg['enable_loop_after_success'] = bool(self.v_loop_after.get())
+        cfg['loop_after_success_max'] = self._int(self.v_loop_after_max, '達成何回で終えるか', 1)
+        cfg['no_match_timeout_seconds'] = self._int(self.v_no_match, '連続はずれでリセット', 0)
+        cfg['day_night_interval'] = self._int(self.v_day_night, '昼夜切り替えの間隔', 1)
+        cfg['timing_mode'] = self.v_timing.get()
+        cfg['debug_log'] = bool(self.v_debug.get())
+        cfg['use_custom_conditions'] = bool(self.v_custom.get())
+        cond = self.v_cond_file.get().strip()
+        if not cond:
+            raise ValueError('条件ファイル: ファイル名を入れてください')
+        if cfg['use_custom_conditions'] and not os.path.exists(os.path.join(SCRIPT_DIR_ABS, cond)):
+            raise ValueError(f'条件ファイル: {cond} が見つかりません')
+        cfg['conditions_file'] = cond
+        for key in self.v_th:
+            cfg[key] = self._float(self.v_th[key], key)
+        cfg['show_settings_ui'] = bool(self.v_show_ui.get())
+        cfg['settings_ui_timeout_seconds'] = self._int(self.v_ui_timeout, '自動で開始するまでの秒数', 0)
+        return cfg
+
+    def _ok(self, auto=False):
+        try:
+            cfg = self.collect()
+        except ValueError as e:
+            if auto:
+                print(f"[Warning] 設定画面: {e}（自動では開始しませんでした）")
+            self.messagebox.showinfo('ZA ドーナツ厳選', str(e), parent=self.win)
+            return
+        if auto:
+            print('[System] 設定画面で操作がなかったので、表示していた設定で開始します。')
+        self.result = (cfg, bool(self.v_save.get()))
+        self._close()
+
+    def _cancel(self):
+        self.result = None
+        self._close()
+
+    def _close(self):
+        self._stop_countdown()
+        try:
+            self.win.grab_release()
+        except Exception:
+            pass
+        self.win.destroy()
+
+
+# NAME（文字列リテラル）と VERSION の書き忘れに気づけるようにする
+if ZA_DonutV188.NAME != f"ZA ドーナツ厳選 v{VERSION}":
+    print(f"[Warning] NAME ({ZA_DonutV188.NAME}) と VERSION ({VERSION}) が合っていません。両方を同じ版に書き換えてください。")

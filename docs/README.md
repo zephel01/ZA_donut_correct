@@ -6,7 +6,7 @@ ZA ドーナツ厳選マクロ（`ZA_donut_correct.py` v2.0.0）のマニュア�
 
 | ドキュメント | 内容 |
 |---|---|
-| [USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md) | **config.json の全設定項目**：書き方、選択肢、環境変数、不正な値を入れたときの挙動、既知の問題、設定例 |
+| [USER_CONFIG_GUIDE.md](USER_CONFIG_GUIDE.md) | **config.json の全設定項目**：書き方、**選択肢一覧（タイプ・サイズ・どうぐ・レシピ等の値と日本語名）**、環境変数、不正な値を入れたときの挙動、既知の問題、設定例 |
 | [RECIPES_LIST.md](RECIPES_LIST.md) | 同梱レシピの一覧：モード、入力操作、レシピ別の推奨設定 |
 
 ## 目的別

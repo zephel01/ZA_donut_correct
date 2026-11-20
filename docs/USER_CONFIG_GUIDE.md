@@ -12,14 +12,15 @@
 2. [ファイルの場所と読み込みルール](#ファイルの場所と読み込みルール)
 3. [JSON の書き方の注意](#json-の書き方の注意)
 4. [設定項目一覧](#設定項目一覧)
-5. [モード別：どの項目が使われるか](#モード別どの項目が使われるか)
-6. [各項目の詳細](#各項目の詳細)
-7. [判定ロジック（成功条件）](#判定ロジック成功条件)
-8. [環境変数による上書き](#環境変数による上書き)
-9. [不正な値を入れたときの挙動](#不正な値を入れたときの挙動)
-10. [既知の問題（v2.0.0）](#既知の問題v200)
-11. [設定例](#設定例)
-12. [トラブルシューティング](#トラブルシューティング)
+5. [選択肢一覧](#選択肢一覧)
+6. [モード別：どの項目が使われるか](#モード別どの項目が使われるか)
+7. [各項目の詳細](#各項目の詳細)
+8. [判定ロジック（成功条件）](#判定ロジック成功条件)
+9. [環境変数による上書き](#環境変数による上書き)
+10. [不正な値を入れたときの挙動](#不正な値を入れたときの挙動)
+11. [既知の問題（v2.0.0）](#既知の問題v200)
+12. [設定例](#設定例)
+13. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
@@ -117,8 +118,8 @@ ZA_donut_correct/
 
 | 項目 | 型 | デフォルト | 有効範囲 / 選択肢 | 環境変数 |
 |---|---|---|---|---|
-| `recipe` | 文字列 | `"recipe1"` | `recipes/` 内のファイル名（拡張子なし） | `RECIPE`（別名 `MODE`） |
-| `type` | 文字列 | `"Dradon"` ※ | タイプ名（カンマ区切りで複数可） | `TYPE` |
+| `recipe` | 文字列 | `"recipe1"` | `recipes/` 内のファイル名（拡張子なし）→ [一覧](#recipe--レシピ) | `RECIPE`（別名 `MODE`） |
+| `type` | 文字列 | `"Dradon"` ※ | タイプ名（カンマ区切りで複数可）→ [一覧](#タイプかがやきパワー--ほかくパワー) | `TYPE` |
 | `item_class` | 文字列 | `"kinomi"` | `kinomi` / `ball` / `coin` / `treasure` / `special` / `candy` | `ITEM_CLASS` |
 | `size` | 文字列 | `"small"` | `oyabun` / `big` / `small` | `SIZE` |
 | `level_size` | 整数 | `3` | `1`〜`3` | `SIZE_LEVEL` |
@@ -142,6 +143,125 @@ ZA_donut_correct/
 | `capture_compromise` | 真偽値 | `true` | `true` / `false` | `ENABLE_CAPTURE_COMPROMISE` |
 
 ※ `type` のデフォルト値はソース上 `"Dradon"`（タイプミス）です。`type` を省略すると色違い判定が成立しません。shiny系では **必ず `type` を書いてください**（[既知の問題](#既知の問題v200)参照）。
+
+---
+
+## 選択肢一覧
+
+種類から選ぶ項目の選択肢をまとめています。値は **左列の英字表記をそのまま** 書いてください（日本語名は書けません）。
+
+### `recipe` — レシピ
+
+`recipes/` 内の `.py` ファイル名（拡張子なし）。同梱分は以下のとおりです（`template.py` は選択不可）。
+
+| 値 | レシピ名（`NAME`） | モード |
+|---|---|---|
+| `shiny1` | 色違い厳選レシピ1 (節約版) | 色違い |
+| `shiny2` | 色違い厳選レシピ2 (タンガのみ×8) | 色違い |
+| `shiny3` | 色違い厳選レシピ3 (ほかくパワー付与レシピ) | 色違い |
+| `shiny4` | 色違い厳選レシピ4 (ほかくパワー付与レシピ2 New) | 色違い |
+| `recipe1` | どうぐパワー節約レシピ | どうぐ |
+| `recipe2` | どうぐパワー重視レシピ/カシブx8 | どうぐ |
+| `recipe3` | 節約レシピ recipe3 | どうぐ |
+| `rainbow1` | レインボードーナツ どうぐパワー | どうぐ |
+| `rainbow2` | バコウ1,ヨロギ1,ハバン1,ロゼル5 | どうぐ |
+| `rainbow3` | ウタン1,ヨロギ1,ナモ4,ロゼル2 | どうぐ |
+
+自作レシピを `recipes/` に置いた場合は、そのファイル名も指定できます。詳細は [RECIPES_LIST.md](RECIPES_LIST.md) を参照してください。
+
+### タイプ（かがやきパワー / ほかくパワー）
+
+`config.json` の `type` と、`donut_conditions.json` の `attribute` で共通の値です。
+
+| 値 | 日本語名 | 使用画像 |
+|---|---|---|
+| `Normal` | ノーマル | `Type_Normal.png` |
+| `Fire` | ほのお | `Type_Fire.png` |
+| `Water` | みず | `Type_Water.png` |
+| `Grass` | くさ | `Type_Grass.png` |
+| `Electric` | でんき | `Type_Electric.png` |
+| `Ice` | こおり | `Type_Ice.png` |
+| `Fighting` | かくとう | `Type_Fighting.png` |
+| `Poison` | どく | `Type_Poison.png` |
+| `Ground` | じめん | `Type_Ground.png` |
+| `Flying` | ひこう | `Type_Flying.png` |
+| `Psychic` | エスパー | `Type_Psychic.png` |
+| `Bug` | むし | `Type_Bug.png` |
+| `Rock` | いわ | `Type_Rock.png` |
+| `Ghost` | ゴースト | `Type_Ghost.png` |
+| `Dragon` | ドラゴン | `Type_Dragon.png` |
+| `Dark` | あく | `Type_Dark.png` |
+| `Steel` | はがね | `Type_Steel.png` |
+| `Fairy` | フェアリー | `Type_Fairy.png` |
+
+「ぜんぶ」（かがやき: `Type_All.png`）と「すべて」（ほかく: `Type_All2.png`）は値として指定しません。自動で判定されます。
+
+書き方は場所によって異なります。
+
+| 場所 | 1タイプ | 複数タイプ | タイプ不問 | 大文字小文字 |
+|---|---|---|---|---|
+| `config.json` の `type` | `"Dragon"` | カンマ区切り文字列 `"Ghost, Dark"`（配列は起動時エラー） | 指定不可（ぜんぶは常に判定） | 自動補正される |
+| `donut_conditions.json` の `attribute` | `"Fire"` | 配列 `["Fire", "Ground"]` | `null` | **補正なし**。先頭大文字で書く |
+
+> **注意（v2.0.0）:** `attribute` に書いたタイプのアイコン画像は、`config.json` の `type` に含まれていないと読み込まれない場合があります（配列指定・ほかくパワーで発生）。`attribute` で使うタイプは `type` にも書いておいてください。
+
+### `size` — サイズパワー
+
+`config.json` の `size` と、`donut_conditions.json` のサイズパワー（`"type": "size"`）の `size` で共通です。
+
+| 値 | 日本語名 | 使用画像 |
+|---|---|---|
+| `oyabun` | オヤブン | `oyabun_label.png` |
+| `big` | でかでか | `big2_label.png` |
+| `small` | ちびちび | `small2_label.png` |
+
+### `item_class` — どうぐパワーの種類
+
+`config.json` の `item_class` と、`donut_conditions.json` のどうぐパワー（`"type": "tool"`）の `class` で共通です。
+
+| 値 | 日本語名 | 使用画像 |
+|---|---|---|
+| `kinomi` | きのみ | `class_kinomi.png` |
+| `ball` | ボール | `class_ball.png` |
+| `coin` | コイン | `class_coin.png` |
+| `treasure` | 宝物 | `class_treasure.png` |
+| `special` | 特別 | `class_special.png` |
+| `candy` | アメ | `class_candy.png` |
+
+### `timing_mode` — 動作タイミング
+
+| 値 | 想定機種 |
+|---|---|
+| `switch2` | 有機ELモデルなど読み込みが速い環境 |
+| `switch1` | 旧型 / Lite など読み込みが遅い環境 |
+
+### 真偽値の項目
+
+`true` / `false` のみ（`"true"` や `1` は `false` 扱い）。
+
+| 項目 | `true` のとき |
+|---|---|
+| `debug_log` | デバッグログを出力 |
+| `enable_loop_after_success` | 目標達成後も `loop_after_success_max` 回まで続行 |
+| `use_custom_conditions` | `conditions_file` のカスタム条件を使用 |
+| `enable_capture_power` | ほかくパワーも成功条件に含める（色違いモード） |
+| `capture_compromise` | ほかくパワーの妥協判定を有効にする |
+
+### `level_*` — レベル
+
+`level_size` / `level_extra` / `level_capture` は `1` / `2` / `3`（詳細は [レベル設定](#レベル設定)）。
+
+### 参考：`donut_conditions.json` のパワー種類（`power.type`）
+
+| 値 | 日本語名 | 追加で書く項目 |
+|---|---|---|
+| `shiny` | かがやきパワー | `attribute`（タイプ / 配列 / `null`） |
+| `size` | サイズパワー | `size`（`oyabun` / `big` / `small`） |
+| `capture` | ほかくパワー | `attribute`（タイプ / 配列 / `null`） |
+| `tool` | どうぐパワー | `class`（`item_class` と同じ値） |
+| `dosari` | どっさりパワー | なし |
+
+すべて `min_level`（`1`〜`3`）が必要です。詳細は [USER_CONDITIONS_GUIDE.md](USER_CONDITIONS_GUIDE.md) を参照してください。
 
 ---
 
@@ -189,7 +309,7 @@ ZA_donut_correct/
 
 #### `type` — かがやきパワーのタイプ（色違いモード）
 
-- 選択肢: `Normal`, `Fire`, `Water`, `Grass`, `Electric`, `Ice`, `Fighting`, `Poison`, `Ground`, `Flying`, `Psychic`, `Bug`, `Rock`, `Ghost`, `Dragon`, `Dark`, `Steel`, `Fairy`
+- 選択肢: 18タイプ（日本語名との対応は [選択肢一覧：タイプ](#タイプかがやきパワー--ほかくパワー)）
 - **複数指定:** カンマ区切りの文字列 `"Ghost, Dark, Dragon"`（前後の空白は無視）。指定順に判定し、最初に一致したタイプで成立します。
 - 大文字小文字は自動補正されます（`"dragon"` → `Dragon`）。
 - 指定タイプに一致しない場合でも、かがやきパワーが**「ぜんぶ」（Type_All）**なら成立扱いになります（自動・無効化不可）。

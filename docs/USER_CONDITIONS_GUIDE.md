@@ -81,7 +81,7 @@
 | セクション名 | 対応モード | 説明 |
 |-------------|-----------|------|
 | `shiny_conditions` | shiny系モード | 色違い厳選モード（shiny1-4）で使用 |
-| `tool_conditions` | どうぐパワーモード | レシピ/レインボーモード（recipe1-3, rainbow1-3）で使用 |
+| `tool_conditions` | どうぐパワーモード | レシピ/レインボーモード（recipe1-3, sour1-2, rainbow1-8）で使用 |
 
 ### 条件の有効化
 

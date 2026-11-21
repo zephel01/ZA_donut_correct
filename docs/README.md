@@ -1,6 +1,6 @@
 # ドキュメント一覧
 
-ZA ドーナツ厳選マクロ（`ZA_donut_correct.py` v<!-- version -->2.1.0<!-- /version -->）のマニュアルです。概要とインストール手順は、ルートの [README.md](../README.md) を参照してください。
+ZA ドーナツ厳選マクロ（`ZA_donut_correct.py` v<!-- version -->2.2.0<!-- /version -->）のマニュアルです。概要とインストール手順は、ルートの [README.md](../README.md) を参照してください。
 
 ## まず読むもの
 

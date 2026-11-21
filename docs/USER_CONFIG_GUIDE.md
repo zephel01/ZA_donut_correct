@@ -1,6 +1,6 @@
 # 設定ガイド（config.json）
 
-対象バージョン: `ZA_donut_correct.py` v<!-- version -->2.1.0<!-- /version -->
+対象バージョン: `ZA_donut_correct.py` v<!-- version -->2.2.0<!-- /version -->
 
 `config.json` は `ZA_donut_correct.py` の動作をすべて決める設定ファイルです。メインロジック（`ZA_donut_correct.py`）を更新しても、設定値は上書きされません。
 
@@ -75,7 +75,7 @@ v2.1.0 から、Poke-Controller で **Start を押すと設定画面が開き、
 
 ### 使い方
 
-1. コマンド一覧で「ZA ドーナツ厳選 v<!-- version -->2.1.0<!-- /version -->」を選び、Start を押す
+1. コマンド一覧で「ZA ドーナツ厳選 v<!-- version -->2.2.0<!-- /version -->」を選び、Start を押す
 2. 設定画面で、レシピと各タブの項目を選ぶ
 3. 「開始」を押すと、その設定で動き始めます。「キャンセル」（または Esc・ウィンドウを閉じる）なら何もしません
 
@@ -115,7 +115,7 @@ v2.1.0 から、Poke-Controller で **Start を押すと設定画面が開き、
 
 ### Poke-Controller-Modified-Extension 0.2.0 での注意
 
-- コマンド名は「ZA ドーナツ厳選 v<!-- version -->2.1.0<!-- /version -->」です。0.2.0 は `NAME` を構文解析だけで読むため、v2.1.0 では `NAME` を文字列リテラルで書いています（v2.0.0 までの f 文字列では一覧に出ませんでした。[SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md#poke-controller-のコマンド名name)）。
+- コマンド名は「ZA ドーナツ厳選 v<!-- version -->2.2.0<!-- /version -->」です。0.2.0 は `NAME` を構文解析だけで読むため、v2.1.0 では `NAME` を文字列リテラルで書いています（v2.0.0 までの f 文字列では一覧に出ませんでした。[SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md#poke-controller-のコマンド名name)）。
 - どうぐモード（どうぐ＋どっさり）のドーナツには、ほかくパワーは付きません。v2.1.0 では、config の値に関係なくプログラム側でほかくパワーを判定から外します（`enable_capture_power` / `capture_compromise` は無視、ほかくパワーを含む `tool_conditions` のカスタム条件も使いません）。
 - 設定画面は Poke-Controller のテーマ（ダークなど）の色に合わせます。
 - 設定画面の入力欄・コンボボックスにカーソルがある間は、Poke-Controller 本体の仕組みで、キーボードでの手動操作（ゲーム機へのキー送信）が止まります。

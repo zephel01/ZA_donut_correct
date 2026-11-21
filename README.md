@@ -1,6 +1,6 @@
 # ZA ドーナツ厳選マクロ
 
-![version](https://img.shields.io/badge/version-2.1.0-blue)
+![version](https://img.shields.io/badge/version-2.2.0-blue)
 [![release](https://img.shields.io/github/v/release/zephel01/ZA_donut_correct?label=release)](https://github.com/zephel01/ZA_donut_correct/releases/latest)
 ![Poke-Controller](https://img.shields.io/badge/Poke--Controller_Modified_Extension-0.2.0-informational)
 [![version check](https://github.com/zephel01/ZA_donut_correct/actions/workflows/version-check.yml/badge.svg)](https://github.com/zephel01/ZA_donut_correct/actions/workflows/version-check.yml)
@@ -9,11 +9,11 @@ Pokémon Legends ZA におけるドーナツ作成を自動化し、特定のパ
 
 | | |
 |---|---|
-| **現在のバージョン** | v<!-- version -->2.1.0<!-- /version -->（[更新履歴](CHANGELOG.md)） |
+| **現在のバージョン** | v<!-- version -->2.2.0<!-- /version -->（[更新履歴](CHANGELOG.md)） |
 | **動作環境** | Poke-Controller Modified Extension 0.2.0 |
 | **マニュアル一覧** | [docs/README.md](docs/README.md) |
 
-> **v2.1.0 の主な変更:** Start を押すと設定画面が開き、config.json の項目を選んでから実行できるようになりました（[設定画面](docs/USER_CONFIG_GUIDE.md#設定画面v210)）。Poke-Controller Modified Extension 0.2.0 に対応しています。詳しくは [CHANGELOG.md](CHANGELOG.md) を参照してください。
+> **v2.2.0 の主な変更:** 設定画面で「狙うもの」（かがやき／どうぐ）をレシピに関係なく選べるようになりました。どうぐモードでは、どうぐの種類を2つまで指定できます（どちらかが付けば成功）。また、どっさりパワーを判定しない「選ばない」も追加しました。レシピ `sour3`・`sour4` も追加しています。詳しくは [CHANGELOG.md](CHANGELOG.md) と [設定ガイド](docs/USER_CONFIG_GUIDE.md) を参照してください。
 
 ## フォルダ構成
 
@@ -86,7 +86,7 @@ Poke-Controller-Modified-Extension/
    ```
 
 3. Poke Controller を起動
-4. コマンド一覧から「ZA ドーナツ厳選 v<!-- version -->2.1.0<!-- /version -->」を選んで Start
+4. コマンド一覧から「ZA ドーナツ厳選 v<!-- version -->2.2.0<!-- /version -->」を選んで Start
 5. 設定画面で条件を選んで「開始」
 
 ## 主な機能
@@ -378,7 +378,7 @@ python tools/bump_version.py --check
 ```
 
 - `NAME` は Poke-Controller Modified Extension 0.2.0 が構文解析だけで読むため、f 文字列にせず文字列リテラルで書きます（スクリプトはそのまま書き換えます）。
-- README・docs の版表示は `<!-- version -->2.1.0<!-- /version -->` で囲まれた部分だけが書き換わります。
+- README・docs の版表示は `<!-- version -->2.2.0<!-- /version -->` で囲まれた部分だけが書き換わります。
 
 **リリースの作り方:** main にマージした後、タグと GitHub Release を作ると、上の release バッジに反映されます。
 

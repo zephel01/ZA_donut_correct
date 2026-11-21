@@ -40,7 +40,7 @@ from Commands.Keys import Button, Hat, Direction
 # =============================================================================
 
 # 【0. バージョン管理】
-VERSION = '2.1.0'
+VERSION = '2.2.0'
 
 # 【外部設定ファイルのパス】
 # config.json に詳細設定を記述してください
@@ -458,7 +458,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
     # PCME 0.2.0 以降は NAME をソースから構文解析だけで読む（実行しない）。
     # f 文字列や変数を使うと「not a literal」として無視され、コマンド一覧に出なくなるので、必ず文字列リテラルで書く。
     # バージョンを上げるときは、上の VERSION とこの NAME の両方を書き換えること。
-    NAME = "ZA ドーナツ厳選 v2.1.0"
+    NAME = "ZA ドーナツ厳選 v2.2.0"
 
     THRESHOLD_LABEL = THRESHOLD_LABEL
     THRESHOLD_ICON  = THRESHOLD_ICON

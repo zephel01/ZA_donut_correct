@@ -8,7 +8,7 @@
 
 | ファイル | コマンド名（Poke-Controller 上の表示） | 用途 | config.json の使用 |
 |---|---|---|---|
-| `ZA_donut_correct.py` | ZA ドーナツ厳選 v<!-- version -->2.1.0<!-- /version --> | ドーナツ厳選の本体 | ✅ 使う |
+| `ZA_donut_correct.py` | ZA ドーナツ厳選 v<!-- version -->2.2.0<!-- /version --> | ドーナツ厳選の本体 | ✅ 使う |
 | `ZA_backupRestart.py` | `ZA_BackupRestart` | ソフトの終了→再起動→セーブデータ読み込みだけを行う | ❌ 使わない |
 | `ZA_day_night.py` | `ZA_DayNightCheck` | イベールセンターへ移動してベンチに座り、ゲーム内の時間帯を画像で確認する | ❌ 使わない |
 
@@ -119,7 +119,7 @@ Poke-Controller は、各スクリプトのクラス変数 `NAME` をコマン�
 |---|---|---|
 | `ZA_backupRestart.py` | `"ZA_BackupRestart"`（文字列リテラル） | ✅ |
 | `ZA_day_night.py` | `"ZA_DayNightCheck"`（文字列リテラル） | ✅ |
-| `ZA_donut_correct.py` | `"ZA ドーナツ厳選 v2.1.0"`（文字列リテラル） | ✅（v2.1.0 から） |
+| `ZA_donut_correct.py` | `"ZA ドーナツ厳選 v2.2.0"`（文字列リテラル） | ✅（v2.1.0 から） |
 
 **Poke-Controller Modified Extension 0.2.0 以降**の `CommandLoader.py` は、コードを実行せずに構文解析だけで `NAME`（と `TAGS`）を読み取ります。f 文字列や変数のように、実行しないと値が決まらない書き方は「not a literal」として無視され、**コマンド一覧に表示されません**。そのため `NAME` は必ず文字列リテラルで書きます。
 
@@ -127,7 +127,7 @@ Poke-Controller は、各スクリプトのクラス変数 `NAME` をコマン�
 class ZA_DonutV188(ImageProcPythonCommand):
     # PCME 0.2.0 以降は NAME をソースから構文解析だけで読む（実行しない）。
     # f 文字列や変数を使うと「not a literal」として無視され、コマンド一覧に出なくなるので、必ず文字列リテラルで書く。
-    NAME = "ZA ドーナツ厳選 v2.1.0"
+    NAME = "ZA ドーナツ厳選 v2.2.0"
 ```
 
 | 版 | NAME | 0.2.0 以降での表示 |

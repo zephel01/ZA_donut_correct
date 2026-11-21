@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-21
+
 ### Added
 
 - レシピ `rainbow4`〜`rainbow8`、`sour1`〜`sour4`
@@ -142,5 +144,6 @@
 - デバッグ機能の修正
 - エリア判定を追加
 
-[Unreleased]: https://github.com/zephel01/ZA_donut_correct/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/zephel01/ZA_donut_correct/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/zephel01/ZA_donut_correct/releases/tag/v2.2.0
 [2.1.0]: https://github.com/zephel01/ZA_donut_correct/releases/tag/v2.1.0

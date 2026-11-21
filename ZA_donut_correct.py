@@ -56,6 +56,7 @@ DEFAULT_CONFIG = {
     'recipe': 'recipe1',
     'type': 'Dradon',
     'item_class': 'kinomi',
+    'target_mode': '',             # 狙うもの: '' = レシピの TARGETS に合わせる / 'shiny' / 'tool'（自分で選ぶ）
     'item_class_2nd': '',          # 2つめのどうぐの種類（'' = 選ばない）。item_class か、これに一致すれば成功
     'size': 'small',
     'level_size': 3,
@@ -390,6 +391,22 @@ def apply_config(cfg, use_env=True):
     g['CURRENT_RECIPE'] = current_recipe
     print(f"[System] Recipe loaded: {current_recipe['name']} (targets: {', '.join(current_recipe['targets'])})")
 
+    # 狙うもの（target_mode）: '' ならレシピの TARGETS のまま。'shiny' / 'tool' ならそれで上書きする
+    target_mode = env.get('TARGET_MODE', cfg.get('target_mode', ''))
+    target_mode = '' if target_mode is None else str(target_mode).strip().lower()
+    if target_mode in ('auto', 'recipe', 'none', 'null'):
+        target_mode = ''
+    if target_mode and target_mode not in ('shiny', 'tool'):
+        print(f"[Warning] target_mode '{target_mode}' は使えません（shiny / tool / 空）。レシピに合わせます。")
+        target_mode = ''
+    g['TARGET_MODE'] = target_mode
+    recipe_mode = 'shiny' if 'shiny' in current_recipe['targets'] else 'tool'
+    if target_mode and target_mode != recipe_mode:
+        current_recipe = dict(current_recipe)
+        current_recipe['targets'] = [target_mode]
+        g['CURRENT_RECIPE'] = current_recipe
+        print(f"[System] 狙うもの: {target_mode}（レシピは {recipe_mode} 向けですが、設定で {target_mode} モードにしています）")
+
     # 現在のモードに応じた条件を取得
     if 'shiny' in current_recipe['targets']:
         g['CUSTOM_CONDITIONS'] = custom_conditions_dict.get('shiny_conditions', [])
@@ -415,6 +432,8 @@ def apply_config(cfg, use_env=True):
     g['SIZE'] = size
 
     g['TARGETS_SIZE'] = get_target_levels(g['SIZE_LEVEL_REQ'])
+    # どうぐモードで level_size が 0 なら、どっさりパワーは判定しない（どうぐパワーだけで成功にする）
+    g['DOSARI_NOT_REQUIRED'] = ('shiny' not in g['CURRENT_RECIPE']['targets']) and g['SIZE_LEVEL_REQ'] == 0
     g['TARGETS_EXTRA'] = get_target_levels(g['EXTRA_LEVEL_REQ'])
     g['TARGETS_CAPTURE'] = get_target_levels(g['CAPTURE_LEVEL_REQ'])
 
@@ -577,7 +596,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             if ENABLE_CAPTURE_POWER:
                 print(f"[System] CapturePower: Enabled (Lv={CAPTURE_LEVEL_REQ}, Compromise={ENABLE_CAPTURE_COMPROMISE})")
         else:
-            print(f"[System] Target: Tool({ITEM_CLASS_DISPLAY}) + Dosari")
+            print(f"[System] Target: Tool({ITEM_CLASS_DISPLAY}) + " + ('Dosari(不問)' if DOSARI_NOT_REQUIRED else 'Dosari'))
 
         if ENABLE_CUSTOM_CONDITIONS:
             print(f"[System] CustomConditions: Enabled ({len(CUSTOM_CONDITIONS)} conditions)")
@@ -1260,7 +1279,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             l1_n = f"Size({SIZE})"
             res1_lvl, s1 = self.detect_power_level(gray, 'size_label', TARGETS_SIZE)
         else:
-            l1_n = "どっさり"
+            l1_n = "どっさり(不問)" if DOSARI_NOT_REQUIRED else "どっさり"
             res1_lvl, s1 = self.detect_power_level(gray, 'dosari_label', TARGETS_SIZE)
 
         str1 = res1_lvl if res1_lvl else "なし"
@@ -1393,7 +1412,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
 
         # 最終成功判定
         # 通常判定： (サイズ一致 AND かがやき一致) AND (ほかくパワー一致 OR ほかくパワー妥協成立)
-        base_match = (res1_lvl is not None and res2_lvl is not None)
+        # どうぐモードで「どっさり 選ばない」（level_size: 0）のときは、どっさりは見ない
+        base_match = ((res1_lvl is not None or DOSARI_NOT_REQUIRED) and res2_lvl is not None)
         # ほかくパワーは色違いモードのときだけ判定に使う（どうぐ＋どっさりのドーナツには付かない）
         capture_ok = (res3_lvl is not None) if ('shiny' in CURRENT_RECIPE['targets'] and ENABLE_CAPTURE_POWER) else True
 
@@ -1486,7 +1506,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         if 'shiny' in CURRENT_RECIPE['targets']:
             self.log(f"Target: {ENV_RECIPE} + Type=[{TARGET_TYPE_Display}] & {SIZE}")
         else:
-            self.log(f"Target: Tool/{ITEM_CLASS_DISPLAY} & Dosari")
+            self.log(f"Target: Tool/{ITEM_CLASS_DISPLAY} & " + ('Dosari(不問)' if DOSARI_NOT_REQUIRED else 'Dosari'))
         self.log(f"Timing Mode: {TIMING_MODE}")
         if ENABLE_CUSTOM_CONDITIONS:
             self.log(f"Custom Conditions: {len(CUSTOM_CONDITIONS)} loaded")
@@ -1644,10 +1664,11 @@ UI_TYPES = [
 UI_SIZES = [('oyabun', 'オヤブン'), ('big', 'でかでか'), ('small', 'ちびちび')]
 UI_ITEM_CLASSES = [('kinomi', 'きのみ'), ('ball', 'ボール'), ('coin', 'コイン'),
                    ('treasure', '宝物'), ('special', '特別'), ('candy', 'アメ')]
+UI_TARGET_MODES = [('shiny', 'かがやき（色違い）'), ('tool', 'どうぐ')]
 UI_TIMING_MODES = [('switch2', 'Switch 2 / 有機EL など（速い）'), ('switch1', 'Switch / Lite など（遅い）')]
 
 # 設定画面の値より優先されなくなる環境変数（画面を使うときは、画面の値で動く）
-UI_ENV_KEYS = ['RECIPE', 'MODE', 'TYPE', 'ITEM_CLASS', 'ITEM_CLASS_2ND', 'SIZE', 'SIZE_LEVEL', 'EXTRA_LEVEL', 'THRESHOLD_LABEL',
+UI_ENV_KEYS = ['RECIPE', 'MODE', 'TARGET_MODE', 'TYPE', 'ITEM_CLASS', 'ITEM_CLASS_2ND', 'SIZE', 'SIZE_LEVEL', 'EXTRA_LEVEL', 'THRESHOLD_LABEL',
                'THRESHOLD_ICON', 'THRESHOLD_LEVEL', 'THRESHOLD_RESULT', 'MAX_LOOP', 'RETRY_LIMIT', 'DEBUG_LOG',
                'NO_MATCH_TIMEOUT_SECONDS', 'DAY_NIGHT_INTERVAL', 'ENABLE_LOOP_AFTER_SUCCESS', 'LOOP_AFTER_SUCCESS_MAX',
                'USE_CUSTOM_CONDITIONS', 'CONDITIONS_FILE', 'TIMING_MODE', 'ENABLE_CAPTURE_POWER', 'CAPTURE_LEVEL',
@@ -1785,6 +1806,10 @@ class _SettingsDialog:
         self.v_show_ui = tk.BooleanVar(value=_is_true(c.get('show_settings_ui', True)))
         self.v_ui_timeout = tk.StringVar(value=str(c.get('settings_ui_timeout_seconds', 60)))
         self.v_save = tk.BooleanVar(value=True)
+        tm = c.get('target_mode', '')
+        tm = '' if tm is None else str(tm).strip().lower()
+        self.v_follow = tk.BooleanVar(value=tm not in ('shiny', 'tool'))
+        self.v_target = tk.StringVar(value=tm if tm in ('shiny', 'tool') else 'tool')
 
         # --- レシピ（上に固定）
         f = self._row(body, 'レシピ')
@@ -1806,6 +1831,21 @@ class _SettingsDialog:
         nb.add(tab_ui, text='この画面')
 
         # --- タブ1: 狙う条件
+        # 狙うもの（かがやき / どうぐ のどちらか）。「レシピに合わせる」なら自動、外すと自分で選ぶ
+        tm_box = ttk.Frame(tab_target)
+        tm_box.pack(fill='x', pady=(0, 4))
+        f = self._row(tm_box, '狙うもの')
+        self.target_radios = []
+        for value, text in UI_TARGET_MODES:
+            rb = ttk.Radiobutton(f, text=text, value=value, variable=self.v_target, command=self._update_mode)
+            rb.pack(side='left', padx=(0, 8))
+            self.target_radios.append(rb)
+        ttk.Checkbutton(tm_box, text='レシピに合わせる（レシピの TARGETS で自動的に決める）',
+                        variable=self.v_follow, command=self._update_mode).pack(anchor='w')
+        self.target_warn = ttk.Label(tm_box, text='', wraplength=620, foreground=self.colors['danger'])
+        self.target_warn.pack(anchor='w')
+        ttk.Separator(tab_target).pack(fill='x', pady=(2, 8))
+
         self.shiny_frame = ttk.Frame(tab_target)
         self.tool_frame = ttk.Frame(tab_target)
 
@@ -1840,7 +1880,8 @@ class _SettingsDialog:
             ttk.Radiobutton(f, text=text, value=value, variable=self.v_item2).pack(side='left', padx=(0, 8))
         self._note(tf, '　どうぐの種類は抽選です。1つめか2つめのどちらかが条件のレベルで付けば成功にします（1つめと同じものを選ぶと「選ばない」と同じ）。',
                    pady=(0, 4))
-        self._levels(tf, 'どっさりパワーのレベル', self.v_level_size)
+        self._radios(tf, 'どっさりパワーのレベル', self.v_level_size,
+                     [('3', 'Lv3 のみ'), ('2', 'Lv2 以上'), ('1', 'Lv1 以上 ※'), ('0', '選ばない')])
         self._levels(tf, 'どうぐパワーのレベル', self.v_level_extra)
         self._note(tab_target, '※ Lv1 の画像（lv1.png）は同梱していないため、「Lv1 以上」は今は「Lv2 以上」と同じ動きです。',
                    side='bottom', pady=(8, 0))
@@ -1929,15 +1970,34 @@ class _SettingsDialog:
         return self.recipes[i][0], self.recipes[i][2]
 
     def _update_mode(self):
-        _, mode = self._current_recipe()
+        _, recipe_mode = self._current_recipe()
+        follow = bool(self.v_follow.get())
+        if follow:
+            self.v_target.set(recipe_mode)
+        for rb in self.target_radios:
+            try:
+                rb.state(['disabled' if follow else '!disabled'])
+            except Exception:
+                pass
+        mode = self.v_target.get()
+        how = 'レシピに合わせる' if follow else '自分で選択'
+        # 色違いモードのサイズには「選ばない」が無いので、どっさりで選ばないにしていたら Lv3 に戻す
+        if mode == 'shiny' and self.v_level_size.get() == '0':
+            self.v_level_size.set('3')
         self.shiny_frame.pack_forget()
         self.tool_frame.pack_forget()
         if mode == 'shiny':
             self.shiny_frame.pack(fill='x')
-            self.mode_label.configure(text='色違いモード: かがやき × サイズ（＋ほかく）を狙います')
+            self.mode_label.configure(text=f'色違いモード（{how}）: かがやき × サイズ（＋ほかく）を狙います')
         else:
             self.tool_frame.pack(fill='x')
-            self.mode_label.configure(text='どうぐモード: どうぐ × どっさりを狙います')
+            self.mode_label.configure(text=f'どうぐモード（{how}）: どうぐ × どっさりを狙います')
+        if not follow and mode != recipe_mode:
+            names = dict(UI_TARGET_MODES)
+            self.target_warn.configure(
+                text=f'※ このレシピは {names[recipe_mode]} 向けです。{names[mode]} で判定しますが、パワーが付きにくい場合があります。')
+        else:
+            self.target_warn.configure(text='')
 
     def _update_capture(self):
         state = '!disabled' if self.v_capture.get() else 'disabled'
@@ -2022,13 +2082,19 @@ class _SettingsDialog:
             raise ValueError('レシピを選んでください')
         cfg = dict(self.cfg)
         cfg['recipe'] = recipe
+        # 狙うもの: レシピに合わせるなら ''、自分で選ぶなら 'shiny' / 'tool'
+        cfg['target_mode'] = '' if self.v_follow.get() else self.v_target.get()
         # タイプ: 1 つも選ばないと、かがやきパワーは「ぜんぶ」のときだけ成立する
         cfg['type'] = ', '.join(self.type_order)
         cfg['size'] = self.v_size.get()
         cfg['item_class'] = self.v_item.get()
         item2 = self.v_item2.get()
         cfg['item_class_2nd'] = '' if item2 == cfg['item_class'] else item2
-        cfg['level_size'] = self._int(self.v_level_size, 'レベル', 1, 3)
+        # どっさりの「選ばない」(0) はどうぐモードだけ。色違いモードのサイズは 1〜3
+        if self.v_target.get() == 'shiny':
+            cfg['level_size'] = self._int(self.v_level_size, 'サイズパワーのレベル', 1, 3)
+        else:
+            cfg['level_size'] = self._int(self.v_level_size, 'どっさりパワーのレベル', 0, 3)
         cfg['level_extra'] = self._int(self.v_level_extra, 'レベル', 1, 3)
         cfg['enable_capture_power'] = bool(self.v_capture.get())
         cfg['level_capture'] = self._int(self.v_level_capture, 'ほかくパワーのレベル', 1, 3)

@@ -82,6 +82,7 @@ v2.1.0 から、Poke-Controller で **Start を押すと設定画面が開き、
 | タブ | 内容 | 対応する項目 |
 |---|---|---|
 | （上） | レシピ（名前とモードを表示） | `recipe` |
+| 狙う条件（共通） | 狙うもの（かがやき / どうぐ）、レシピに合わせるか。選んだほうの項目だけを表示 | `target_mode` |
 | 狙う条件（色違い） | かがやきのタイプ（複数可。チェックした順に判定）、サイズ、各レベル、ほかくパワー | `type` / `size` / `level_size` / `level_extra` / `enable_capture_power` / `level_capture` / `capture_compromise` |
 | 狙う条件（どうぐ） | どうぐの種類、2つめのどうぐの種類（選ばない可）、どっさり・どうぐのレベル | `item_class` / `item_class_2nd` / `level_size` / `level_extra` |
 | 回数・リセット | ドーナツを作る最大回数、リトライ回数、目標達成後も続けるか、連続はずれでリセットする秒数、昼夜切り替えの間隔、動作タイミング、デバッグログ | `max_loop` / `retry_limit` / `enable_loop_after_success` / `loop_after_success_max` / `no_match_timeout_seconds` / `day_night_interval` / `timing_mode` / `debug_log` |
@@ -176,9 +177,10 @@ ZA_donut_correct/
 | `recipe` | 文字列 | `"recipe1"` | `recipes/` 内のファイル名（拡張子なし）→ [一覧](#recipe--レシピ) | `RECIPE`（別名 `MODE`） |
 | `type` | 文字列 | `"Dradon"` ※ | タイプ名（カンマ区切りで複数可）→ [一覧](#タイプかがやきパワー--ほかくパワー) | `TYPE` |
 | `item_class` | 文字列 | `"kinomi"` | `kinomi` / `ball` / `coin` / `treasure` / `special` / `candy` | `ITEM_CLASS` |
+| `target_mode` | 文字列 | `""`（レシピに合わせる） | `""` / `shiny` / `tool` | `TARGET_MODE` |
 | `item_class_2nd` | 文字列 | `""`（選ばない） | `item_class` と同じ6種類、または `""` | `ITEM_CLASS_2ND` |
 | `size` | 文字列 | `"small"` | `oyabun` / `big` / `small` | `SIZE` |
-| `level_size` | 整数 | `3` | `1`〜`3` | `SIZE_LEVEL` |
+| `level_size` | 整数 | `3` | `1`〜`3`（どうぐモードのみ `0` = どっさりを選ばない） | `SIZE_LEVEL` |
 | `level_extra` | 整数 | `3` | `1`〜`3` | `EXTRA_LEVEL` |
 | `threshold_label` | 小数 | `0.75` | `0.0`〜`1.0` | `THRESHOLD_LABEL` |
 | `threshold_icon` | 小数 | `0.75` | `0.0`〜`1.0` | `THRESHOLD_ICON` |
@@ -332,14 +334,14 @@ ZA_donut_correct/
 
 ## モード別：どの項目が使われるか
 
-レシピファイルの `TARGETS` によってモードが決まります（[RECIPES_LIST.md](RECIPES_LIST.md) 参照）。
+レシピファイルの `TARGETS` によってモードが決まります（[RECIPES_LIST.md](RECIPES_LIST.md) 参照）。[`target_mode`](#target_mode--狙うもの色違い--どうぐ) を `shiny` / `tool` にすると、レシピに関係なくそのモードになります。
 
 | 項目 | 色違いモード（`TARGETS=['shiny']`） | どうぐモード（`TARGETS=['tool']`） |
 |---|---|---|
 | `type` | ✅ かがやきパワーのタイプ | — 無視 |
 | `size` | ✅ サイズパワーの種類 | — 無視 |
 | `item_class` | — 無視 | ✅ どうぐパワーの種類 |
-| `level_size` | ✅ サイズパワーのレベル | ✅ **どっさりパワー**のレベル |
+| `level_size` | ✅ サイズパワーのレベル | ✅ **どっさりパワー**のレベル（`0` = どっさりを判定しない） |
 | `level_extra` | ✅ かがやきパワーのレベル | ✅ どうぐパワーのレベル |
 | `enable_capture_power` / `level_capture` / `capture_compromise` | ✅ | — 無視 |
 | その他（しきい値・ループ・昼夜・カスタム条件など） | ✅ | ✅ |
@@ -393,6 +395,21 @@ ZA_donut_correct/
 | `candy` | アメ | `class_candy.png` |
 
 一覧にない値は補正されず、画像が見つからないため一致しなくなります。
+
+#### `target_mode` — 狙うもの（色違い / どうぐ）
+
+色違いモード（かがやき×タイプ＋サイズ＋ほかく）とどうぐモード（どうぐ＋どっさり）の、どちらで判定するかを決めます。
+
+| 値 | 動き |
+|---|---|
+| `""`（初期値） | レシピの `TARGETS` に合わせる（`'shiny'` を含めば色違いモード、それ以外はどうぐモード。今までどおり） |
+| `"shiny"` | レシピに関係なく色違いモードで判定する |
+| `"tool"` | レシピに関係なくどうぐモードで判定する |
+
+- `"auto"` / `"recipe"` / `"none"` / `null` も `""` と同じ扱いです。一覧にない値は警告を出して `""` にします。
+- レシピファイル自体は書き換えません（読み込んだあとに、判定に使う `TARGETS` だけを置き換えます）。
+- レシピの向き先と違うモードにすると、起動ログに `[System] 狙うもの: shiny（レシピは tool 向けですが、…）` と出ます。そのドーナツに狙うパワーが付きにくい組み合わせでも、止めずに回します。
+- 設定画面では「狙う条件」タブの一番上で選びます。「レシピに合わせる」をオンにすると `""`、オフにしてラジオボタンで選ぶと `"shiny"` / `"tool"` が保存されます。
 
 #### `item_class_2nd` — 2つめのどうぐパワーの種類（どうぐモード）
 
@@ -454,7 +471,9 @@ ZA_donut_correct/
 
 注意:
 - `4` 以上を指定すると合格レベルが空になり、**永久に一致しません**。
-- `0` 以下は `1` と同じ扱いです。
+- **どうぐモードで `level_size: 0`** にすると、どっさりパワーを判定しません（「選ばない」）。どうぐパワーだけが条件を満たせば成功です。ログには `どっさり(不問)` と出ます。
+- 色違いモードの `level_size`（サイズパワー）と、`level_extra` / `level_capture` では、`0` 以下は `1` と同じ扱いです。
+- 設定画面では、どうぐモードの「どっさりパワーのレベル」に「選ばない」があります。色違いモードに切り替えると、サイズパワーのレベルは Lv3 に戻ります。
 - 数値に変換できない値（`"abc"` など）は `3` として扱われます（`level_capture` も `3` になり、デフォルトの `1` にはなりません）。
 
 ---
@@ -609,7 +628,7 @@ backupRestart（ソフト再起動）
 | | パワー1 | パワー2 | ほかく |
 |---|---|---|---|
 | 色違いモード | サイズ（`size`, `level_size`） | かがやき（`type` または ぜんぶ, `level_extra`） | `enable_capture_power: true` のときのみ必須 |
-| どうぐモード | どっさり（`level_size`） | どうぐ（`item_class` または `item_class_2nd`, `level_extra`） | 対象外（常に OK） |
+| どうぐモード | どっさり（`level_size`。`0` なら判定しない） | どうぐ（`item_class` または `item_class_2nd`, `level_extra`） | 対象外（常に OK） |
 
 ---
 
@@ -625,6 +644,7 @@ backupRestart（ソフト再起動）
 | `MODE` | `recipe` | `RECIPE` が無いときのみ有効（旧名） |
 | `TYPE` | `type` | |
 | `ITEM_CLASS` | `item_class` | |
+| `TARGET_MODE` | `target_mode` | 空文字・`auto` でレシピに合わせる |
 | `ITEM_CLASS_2ND` | `item_class_2nd` | 空文字・`none` で選ばない |
 | `SIZE` | `size` | |
 | `SIZE_LEVEL` | `level_size` | |
@@ -669,6 +689,7 @@ export TYPE="Ghost, Dark"
 | `type` | 配列 `["Fire"]` | **起動時エラーで停止** | 例外 |
 | `type` | 存在しないタイプ名 | そのタイプは永久に不一致 | なし |
 | `item_class` | 一覧外 | 永久に不一致 | なし |
+| `target_mode` | 一覧外 | レシピに合わせる | あり |
 | `item_class_2nd` | 一覧外 | 選ばない扱い | あり |
 | `size` | 一覧外 | `oyabun` に補正 | なし |
 | `timing_mode` | 一覧外 | `switch2` に補正 | あり |

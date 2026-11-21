@@ -8,7 +8,8 @@
 
 ### Added
 
-- レシピ `rainbow4`〜`rainbow8`、`sour1`・`sour2`
+- レシピ `rainbow4`〜`rainbow8`、`sour1`〜`sour4`
+- 2つめのどうぐパワーの種類（`item_class_2nd`、環境変数 `ITEM_CLASS_2ND`）。どうぐモードで、`item_class` か `item_class_2nd` のどちらかが付けば成功にする。設定画面の「狙う条件」タブに「2つめのどうぐの種類」（6種類＋選ばない）を追加
 
 ### Changed
 

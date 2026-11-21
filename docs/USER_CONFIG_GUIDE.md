@@ -83,7 +83,7 @@ v2.1.0 から、Poke-Controller で **Start を押すと設定画面が開き、
 |---|---|---|
 | （上） | レシピ（名前とモードを表示） | `recipe` |
 | 狙う条件（色違い） | かがやきのタイプ（複数可。チェックした順に判定）、サイズ、各レベル、ほかくパワー | `type` / `size` / `level_size` / `level_extra` / `enable_capture_power` / `level_capture` / `capture_compromise` |
-| 狙う条件（どうぐ） | どうぐの種類、どっさり・どうぐのレベル | `item_class` / `level_size` / `level_extra` |
+| 狙う条件（どうぐ） | どうぐの種類、2つめのどうぐの種類（選ばない可）、どっさり・どうぐのレベル | `item_class` / `item_class_2nd` / `level_size` / `level_extra` |
 | 回数・リセット | ドーナツを作る最大回数、リトライ回数、目標達成後も続けるか、連続はずれでリセットする秒数、昼夜切り替えの間隔、動作タイミング、デバッグログ | `max_loop` / `retry_limit` / `enable_loop_after_success` / `loop_after_success_max` / `no_match_timeout_seconds` / `day_night_interval` / `timing_mode` / `debug_log` |
 | 認識・カスタム条件 | カスタム条件を使うか、条件ファイル、しきい値 4 つ | `use_custom_conditions` / `conditions_file` / `threshold_*` |
 | この画面 | 次から画面を出すか、自動で開始するまでの秒数 | `show_settings_ui` / `settings_ui_timeout_seconds` |
@@ -176,6 +176,7 @@ ZA_donut_correct/
 | `recipe` | 文字列 | `"recipe1"` | `recipes/` 内のファイル名（拡張子なし）→ [一覧](#recipe--レシピ) | `RECIPE`（別名 `MODE`） |
 | `type` | 文字列 | `"Dradon"` ※ | タイプ名（カンマ区切りで複数可）→ [一覧](#タイプかがやきパワー--ほかくパワー) | `TYPE` |
 | `item_class` | 文字列 | `"kinomi"` | `kinomi` / `ball` / `coin` / `treasure` / `special` / `candy` | `ITEM_CLASS` |
+| `item_class_2nd` | 文字列 | `""`（選ばない） | `item_class` と同じ6種類、または `""` | `ITEM_CLASS_2ND` |
 | `size` | 文字列 | `"small"` | `oyabun` / `big` / `small` | `SIZE` |
 | `level_size` | 整数 | `3` | `1`〜`3` | `SIZE_LEVEL` |
 | `level_extra` | 整数 | `3` | `1`〜`3` | `EXTRA_LEVEL` |
@@ -393,6 +394,24 @@ ZA_donut_correct/
 
 一覧にない値は補正されず、画像が見つからないため一致しなくなります。
 
+#### `item_class_2nd` — 2つめのどうぐパワーの種類（どうぐモード）
+
+どうぐパワーの種類（きのみ・ボールなど）は抽選で決まります。`item_class_2nd` を指定すると、**`item_class` か `item_class_2nd` のどちらか**が `level_extra` のレベルで付いたときに成功にします（どっさりパワーの条件は今までどおり必要）。
+
+| 値 | 動き |
+|---|---|
+| `""`（初期値） | 選ばない。`item_class` だけで判定（今までどおり） |
+| `kinomi` / `ball` / `coin` / `treasure` / `special` / `candy` | 1つめで一致しなければ、この種類でも判定する |
+
+- `"none"` / `null` / `"選ばない"` も「選ばない」と同じ扱いです。
+- `item_class` と同じ値は「選ばない」と同じ扱いです。
+- 一覧にない値は、警告を出して「選ばない」にします。
+- ログには、2つめで一致したとき `どうぐ(ball・2つめ)` のように出ます。
+
+```json
+{ "recipe": "sour4", "item_class": "kinomi", "item_class_2nd": "ball", "level_size": 2, "level_extra": 2 }
+```
+
 #### `size` — サイズパワーの種類（色違いモード）
 
 | 値 | 意味 | 使用画像 |
@@ -590,7 +609,7 @@ backupRestart（ソフト再起動）
 | | パワー1 | パワー2 | ほかく |
 |---|---|---|---|
 | 色違いモード | サイズ（`size`, `level_size`） | かがやき（`type` または ぜんぶ, `level_extra`） | `enable_capture_power: true` のときのみ必須 |
-| どうぐモード | どっさり（`level_size`） | どうぐ（`item_class`, `level_extra`） | 対象外（常に OK） |
+| どうぐモード | どっさり（`level_size`） | どうぐ（`item_class` または `item_class_2nd`, `level_extra`） | 対象外（常に OK） |
 
 ---
 
@@ -606,6 +625,7 @@ backupRestart（ソフト再起動）
 | `MODE` | `recipe` | `RECIPE` が無いときのみ有効（旧名） |
 | `TYPE` | `type` | |
 | `ITEM_CLASS` | `item_class` | |
+| `ITEM_CLASS_2ND` | `item_class_2nd` | 空文字・`none` で選ばない |
 | `SIZE` | `size` | |
 | `SIZE_LEVEL` | `level_size` | |
 | `EXTRA_LEVEL` | `level_extra` | |
@@ -649,6 +669,7 @@ export TYPE="Ghost, Dark"
 | `type` | 配列 `["Fire"]` | **起動時エラーで停止** | 例外 |
 | `type` | 存在しないタイプ名 | そのタイプは永久に不一致 | なし |
 | `item_class` | 一覧外 | 永久に不一致 | なし |
+| `item_class_2nd` | 一覧外 | 選ばない扱い | あり |
 | `size` | 一覧外 | `oyabun` に補正 | なし |
 | `timing_mode` | 一覧外 | `switch2` に補正 | あり |
 | `level_*` | 数値以外 | `3` | なし |

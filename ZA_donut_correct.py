@@ -56,6 +56,7 @@ DEFAULT_CONFIG = {
     'recipe': 'recipe1',
     'type': 'Dradon',
     'item_class': 'kinomi',
+    'item_class_2nd': '',          # 2つめのどうぐの種類（'' = 選ばない）。item_class か、これに一致すれば成功
     'size': 'small',
     'level_size': 3,
     'level_extra': 3,
@@ -237,6 +238,9 @@ def _is_true(value):
     return str(value).lower() == 'true'
 
 
+VALID_ITEM_CLASSES = ['kinomi', 'ball', 'coin', 'treasure', 'special', 'candy']
+
+
 def apply_config(cfg, use_env=True):
     """
     設定値（config.json の辞書）から、各モジュール変数を決めて反映する (v2.1.0)
@@ -261,6 +265,18 @@ def apply_config(cfg, use_env=True):
     # 環境変数で上書き可能な設定値の読み込み（環境変数 > 設定ファイル）
     size = str(env.get('SIZE', cfg['size'])).lower()
     g['INPUT_ITEM_CLASS'] = str(env.get('ITEM_CLASS', cfg['item_class'])).lower()
+    # 2つめのどうぐの種類（'' / none / null = 選ばない。1つめと同じなら選ばない扱い）
+    item2 = env.get('ITEM_CLASS_2ND', cfg.get('item_class_2nd', ''))
+    item2 = '' if item2 is None else str(item2).strip().lower()
+    if item2 in ('none', 'null', '選ばない'):
+        item2 = ''
+    if item2 and item2 not in VALID_ITEM_CLASSES:
+        print(f"[Warning] item_class_2nd '{item2}' は使えません（{', '.join(VALID_ITEM_CLASSES)}）。2つめは選ばない扱いにします。")
+        item2 = ''
+    if item2 == g['INPUT_ITEM_CLASS']:
+        item2 = ''
+    g['INPUT_ITEM_CLASS_2ND'] = item2
+    g['ITEM_CLASS_DISPLAY'] = g['INPUT_ITEM_CLASS'] + (f"/{item2}" if item2 else '')
 
     # タイミングモード設定
     timing_mode = str(env.get('TIMING_MODE', cfg['timing_mode'])).lower()
@@ -521,6 +537,8 @@ class ZA_DonutV188(ImageProcPythonCommand):
         else:
             files['tool_label'] = 'tool_label.png'
             files['target_icon'] = f"class_{INPUT_ITEM_CLASS}.png"
+            if INPUT_ITEM_CLASS_2ND:
+                files['target_icon_2nd'] = f"class_{INPUT_ITEM_CLASS_2ND}.png"
 
         # カスタム条件で必要な追加のテンプレートを読み込み
         if ENABLE_CUSTOM_CONDITIONS and CUSTOM_CONDITIONS:
@@ -559,7 +577,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
             if ENABLE_CAPTURE_POWER:
                 print(f"[System] CapturePower: Enabled (Lv={CAPTURE_LEVEL_REQ}, Compromise={ENABLE_CAPTURE_COMPROMISE})")
         else:
-            print(f"[System] Target: Tool({INPUT_ITEM_CLASS}) + Dosari")
+            print(f"[System] Target: Tool({ITEM_CLASS_DISPLAY}) + Dosari")
 
         if ENABLE_CUSTOM_CONDITIONS:
             print(f"[System] CustomConditions: Enabled ({len(CUSTOM_CONDITIONS)} conditions)")
@@ -1295,6 +1313,17 @@ class ZA_DonutV188(ImageProcPythonCommand):
             res2_lvl, s2 = self.detect_power_icon_level(
                 gray, 'tool_label', 'target_icon', TARGETS_EXTRA
             )
+            # 1つめで一致しなければ、2つめのどうぐの種類で判定
+            if res2_lvl is None and INPUT_ITEM_CLASS_2ND:
+                lvl_2nd, s_2nd = self.detect_power_icon_level(
+                    gray, 'tool_label', 'target_icon_2nd', TARGETS_EXTRA
+                )
+                if lvl_2nd is not None:
+                    res2_lvl, s2 = lvl_2nd, s_2nd
+                    l2_n = f"どうぐ({INPUT_ITEM_CLASS_2ND}・2つめ)"
+                else:
+                    s2 = max(s2, s_2nd)
+                    l2_n = f"どうぐ({ITEM_CLASS_DISPLAY})"
 
         # === ほかくパワー検知（shinyモードかつ有効時のみ）===
         res3_lvl = None
@@ -1457,7 +1486,7 @@ class ZA_DonutV188(ImageProcPythonCommand):
         if 'shiny' in CURRENT_RECIPE['targets']:
             self.log(f"Target: {ENV_RECIPE} + Type=[{TARGET_TYPE_Display}] & {SIZE}")
         else:
-            self.log(f"Target: Tool/{INPUT_ITEM_CLASS} & Dosari")
+            self.log(f"Target: Tool/{ITEM_CLASS_DISPLAY} & Dosari")
         self.log(f"Timing Mode: {TIMING_MODE}")
         if ENABLE_CUSTOM_CONDITIONS:
             self.log(f"Custom Conditions: {len(CUSTOM_CONDITIONS)} loaded")
@@ -1618,7 +1647,7 @@ UI_ITEM_CLASSES = [('kinomi', 'きのみ'), ('ball', 'ボール'), ('coin', 'コ
 UI_TIMING_MODES = [('switch2', 'Switch 2 / 有機EL など（速い）'), ('switch1', 'Switch / Lite など（遅い）')]
 
 # 設定画面の値より優先されなくなる環境変数（画面を使うときは、画面の値で動く）
-UI_ENV_KEYS = ['RECIPE', 'MODE', 'TYPE', 'ITEM_CLASS', 'SIZE', 'SIZE_LEVEL', 'EXTRA_LEVEL', 'THRESHOLD_LABEL',
+UI_ENV_KEYS = ['RECIPE', 'MODE', 'TYPE', 'ITEM_CLASS', 'ITEM_CLASS_2ND', 'SIZE', 'SIZE_LEVEL', 'EXTRA_LEVEL', 'THRESHOLD_LABEL',
                'THRESHOLD_ICON', 'THRESHOLD_LEVEL', 'THRESHOLD_RESULT', 'MAX_LOOP', 'RETRY_LIMIT', 'DEBUG_LOG',
                'NO_MATCH_TIMEOUT_SECONDS', 'DAY_NIGHT_INTERVAL', 'ENABLE_LOOP_AFTER_SUCCESS', 'LOOP_AFTER_SUCCESS_MAX',
                'USE_CUSTOM_CONDITIONS', 'CONDITIONS_FILE', 'TIMING_MODE', 'ENABLE_CAPTURE_POWER', 'CAPTURE_LEVEL',
@@ -1733,6 +1762,9 @@ class _SettingsDialog:
         self.v_types = {t: tk.BooleanVar(value=t in cur_types) for t, _ in UI_TYPES}
         self.v_size = tk.StringVar(value=str(c['size']).lower() if str(c['size']).lower() in dict(UI_SIZES) else 'oyabun')
         self.v_item = tk.StringVar(value=str(c['item_class']).lower())
+        item2 = c.get('item_class_2nd', '')
+        item2 = '' if item2 is None else str(item2).strip().lower()
+        self.v_item2 = tk.StringVar(value=item2 if item2 in dict(UI_ITEM_CLASSES) else '')
         self.v_level_size = tk.StringVar(value=str(c['level_size']))
         self.v_level_extra = tk.StringVar(value=str(c['level_extra']))
         self.v_capture = tk.BooleanVar(value=_is_true(c['enable_capture_power']))
@@ -1803,6 +1835,11 @@ class _SettingsDialog:
         f = self._row(tf, 'どうぐパワーの種類')
         for i, (value, text) in enumerate(UI_ITEM_CLASSES):
             ttk.Radiobutton(f, text=text, value=value, variable=self.v_item).pack(side='left', padx=(0, 8))
+        f = self._row(tf, '2つめのどうぐの種類')
+        for value, text in UI_ITEM_CLASSES + [('', '選ばない')]:
+            ttk.Radiobutton(f, text=text, value=value, variable=self.v_item2).pack(side='left', padx=(0, 8))
+        self._note(tf, '　どうぐの種類は抽選です。1つめか2つめのどちらかが条件のレベルで付けば成功にします（1つめと同じものを選ぶと「選ばない」と同じ）。',
+                   pady=(0, 4))
         self._levels(tf, 'どっさりパワーのレベル', self.v_level_size)
         self._levels(tf, 'どうぐパワーのレベル', self.v_level_extra)
         self._note(tab_target, '※ Lv1 の画像（lv1.png）は同梱していないため、「Lv1 以上」は今は「Lv2 以上」と同じ動きです。',
@@ -1989,6 +2026,8 @@ class _SettingsDialog:
         cfg['type'] = ', '.join(self.type_order)
         cfg['size'] = self.v_size.get()
         cfg['item_class'] = self.v_item.get()
+        item2 = self.v_item2.get()
+        cfg['item_class_2nd'] = '' if item2 == cfg['item_class'] else item2
         cfg['level_size'] = self._int(self.v_level_size, 'レベル', 1, 3)
         cfg['level_extra'] = self._int(self.v_level_extra, 'レベル', 1, 3)
         cfg['enable_capture_power'] = bool(self.v_capture.get())
